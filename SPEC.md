@@ -15,7 +15,7 @@ that build it are in [ROADMAP.md](ROADMAP.md).
 |---|---|
 | **Content script** | Runs on every site and in every frame. Finds every `<video>`, including ones in shadow DOM, in iframes and added after load, and applies the speed rules (§3.2). |
 | **Shortcuts** | `Alt+.` faster, `Alt+,` slower (0.25 steps), `Alt+R` toggles: any speed other than 1× → 1×, 1× → default speed. Each press changes every video in the tab, iframes included. Rebindable in the browser's shortcut settings. |
-| **Badge** | On tabs that have a video, the toolbar icon shows the speed of the video playing or last played (`2×`, `2.25`, `1.5`). On disabled sites it always shows `off`. Tabs with no video show nothing. |
+| **Badge** | On tabs that have a video, the toolbar icon shows the speed of the video playing or last played, in whichever frame (`2×`, `2.25`, `1.5`); before any has played, the first one found. A whole speed keeps its ×; others drop it to fit. On disabled sites it always shows `off`. Tabs with no video show nothing. |
 | **Speed label** | When our controls change the speed, a small `1.75×` label appears over the video for about a second, then fades. Isolated from site styles; works in fullscreen. Never shown permanently. |
 | **Popup** | An on/off switch for the page site, a −/+ control showing this tab's speed, and the default speed setting. Shows a one-time shortcut hint, and a warning with a grant button when the browser has blocked the extension from the site. |
 | **Options page** | The list of disabled sites with remove buttons, an **Add site** field, and a link to the browser's shortcut settings. Pasting a URL into Add site reduces it to the hostname and says what it will disable. |
@@ -116,6 +116,12 @@ default, so a bad item never stops the rules.
 Per-video state lives in memory only, in a `WeakMap<HTMLVideoElement, VideoState>` in each
 frame's content script: source key, speed before we touched it, override, reset counter.
 Overrides never sync and never survive a reload.
+
+`storage.session` (this browser session only, never synced):
+
+| Key | Value | Notes |
+|---|---|---|
+| `tab:<tabId>` | `{ [frameId]: { doc, off, video: { speed, playing, playedAt } \| null } }` | Each frame's report for the badge, and for the popup's speed for this tab. A frame sends one only when it has something to show, and withdraws it on `pagehide`; `doc` is per document, so a late withdrawal from the page a tab just left can't erase the new one. Removed when the tab closes. |
 
 ## 5. Architecture
 

@@ -95,6 +95,16 @@ export async function pressShortcut(context: BrowserContext, page: Page, command
   );
 }
 
+/** The toolbar badge's text for `page`'s tab. */
+export async function badge(context: BrowserContext, page: Page): Promise<string> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  return worker.evaluate(async (url) => {
+    const tab = (await chrome.tabs.query({})).find((t) => t.url === url);
+    if (!tab) throw new Error(`no tab at ${url}`);
+    return chrome.action.getBadgeText({ tabId: tab.id });
+  }, page.url());
+}
+
 export interface SpeedLabelState {
   /** Whether the label layer is showing. */
   open: boolean;
