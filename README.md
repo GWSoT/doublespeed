@@ -18,6 +18,7 @@ make install     # npm ci
 make dev         # opens Chrome with the extension loaded and reloading on save
 make dev-firefox # the same in Firefox
 make test        # unit tests
+make e2e         # Playwright end-to-end tests (first: npx playwright install chromium)
 make lint        # type checks (svelte-check) and Mozilla's web-ext lint
 make build       # .output/chrome-mv3 and .output/firefox-mv3
 make zip         # store-ready zips in .output/

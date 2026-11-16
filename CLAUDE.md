@@ -5,9 +5,15 @@ Doublespeed is a Chrome and Firefox extension that plays every web video at 2× 
 
 ## Working here
 
-- **Layout:** `entrypoints/` holds the WXT entrypoints (`popup/` today; `content.ts`, `background.ts` and `options/` arrive in Phases 1–3). `src/lib/` holds browser-independent logic with its `*.test.ts` beside it. `public/_locales/en/messages.json` holds every UI string. `wxt.config.ts` generates the manifest.
-- **Commands:** `make dev` opens Chrome with the extension live-reloading and `make dev-firefox` does the same in Firefox. `make test` runs Vitest. `make lint` runs svelte-check (TS and Svelte, warnings fail) and `web-ext lint` on a Firefox build. `make zip` produces the store zips.
-- **Ports:** :3210 for WXT's dev server and :3211 for the Playwright fixture server (Phase 1). Both are off the ports other projects in `~/projects` claim (3000/3001, 3100, 5178, 7420s, 8080, 8100).
+- **Layout:**
+  - `entrypoints/`: the WXT entrypoints. `content.ts` and `popup/` exist today; `background.ts` and `options/` arrive in Phases 1–3.
+  - `src/lib/`: browser-independent logic, with its `*.test.ts` beside it.
+  - `src/content/`: the DOM side of the content script (video finder, speed engine).
+  - `tests/e2e/`: Playwright specs, fixture pages in `pages/`, and test clips in `pages/media/` (made with ffmpeg; VP9/Opus WebM, because Playwright's Chromium has no H.264).
+  - `public/_locales/en/messages.json`: every UI string.
+  - `wxt.config.ts`: generates the manifest.
+- **Commands:** `make dev` opens Chrome with the extension live-reloading and `make dev-firefox` does the same in Firefox. `make test` runs Vitest. `make e2e` builds for Chrome and runs Playwright with the extension loaded; run `npx playwright install chromium` once first. `make lint` runs svelte-check (TS and Svelte, warnings fail) and `web-ext lint` on a Firefox build. `make zip` produces the store zips.
+- **Ports:** :3210 for WXT's dev server and :3211 for the Playwright fixture server (`tests/e2e/fixture-server.ts`). The fixture server is reached as both `localhost` and `127.0.0.1` to get cross-origin iframes from one server. Both are off the ports other projects in `~/projects` claim (3000/3001, 3100, 5178, 7420s, 8080, 8100).
 - **Vocabulary:** SPEC §3 is the glossary (default speed, override, site reset, page site, site pattern…). Use its terms in code and docs.
 - **Hard requirements:**
   - **Permissions:** only `storage` and `<all_urls>`. Adding any permission needs an ADR, because both stores ask for a justification.

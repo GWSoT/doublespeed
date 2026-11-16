@@ -131,7 +131,13 @@ Overrides never sync and never survive a reload.
 
 - `entrypoints/` holds WXT entrypoints: `background.ts`, `content.ts`, `popup/`, `options/`.
 - `src/lib/` holds browser-independent logic (site patterns, speed steps, the rules as a
-  state machine), unit tested with Vitest.
+  state machine), unit tested with Vitest. `src/content/` holds the content script's DOM
+  side: the video finder and the speed engine that carries out the rules.
+- The video finder observes the document and every reachable shadow root. It looks up closed
+  roots only on custom elements, to keep the cost per element low. A custom element that
+  gets its shadow root after insertion is checked again at `DOMContentLoaded` and `load`.
+  After that, a click inside it reveals it. A player defined after load that autoplays
+  without a click is the known gap.
 - `tests/e2e/` holds Playwright tests that load the built extension into Chromium and drive
   local fixture pages: a YouTube-style player that resets to 1× per video, iframes, open and
   closed shadow DOM, a live stream, and videos added after load.

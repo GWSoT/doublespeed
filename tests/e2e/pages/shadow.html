@@ -1,0 +1,96 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>shadow</title>
+<script>
+  // Closed roots are invisible to page scripts too, so the page keeps references for the test.
+  window.closedVideos = {};
+
+  function makeVideo() {
+    const video = document.createElement('video');
+    video.src = '/media/clip.webm';
+    video.preload = 'auto';
+    video.muted = true;
+    return video;
+  }
+
+  customElements.define(
+    'open-player',
+    class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).append(makeVideo());
+      }
+    },
+  );
+
+  customElements.define(
+    'closed-player',
+    class extends HTMLElement {
+      #video = makeVideo();
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'closed' }).append(this.#video);
+      }
+      // Parser-created elements get their attributes after the constructor, so `id` is read here.
+      connectedCallback() {
+        window.closedVideos[this.id] = this.#video;
+      }
+    },
+  );
+
+  // A player whose shadow root exists first and gets its video a second later.
+  customElements.define(
+    'empty-player',
+    class extends HTMLElement {
+      constructor() {
+        super();
+        const root = this.attachShadow({ mode: 'open' });
+        setTimeout(() => root.append(makeVideo()), 1000);
+      }
+    },
+  );
+</script>
+
+<open-player id="open"></open-player>
+<closed-player id="closed"></closed-player>
+<empty-player id="appended"></empty-player>
+<div id="declarative">
+  <template shadowrootmode="open"><video src="/media/clip.webm" preload="auto" muted></video></template>
+</div>
+<!-- Inserted before it's defined: it only gets its closed root when the module below runs. -->
+<late-player id="late"></late-player>
+<!-- Defined after load: only a click inside it reveals its closed root to the extension. -->
+<lazy-player id="lazy" style="display: block; width: 160px; height: 90px"></lazy-player>
+
+<script type="module">
+  customElements.define(
+    'late-player',
+    class extends HTMLElement {
+      constructor() {
+        super();
+        const video = makeVideo();
+        this.attachShadow({ mode: 'closed' }).append(video);
+        window.closedVideos[this.id] = video;
+      }
+    },
+  );
+</script>
+<script>
+  addEventListener('load', () => {
+    setTimeout(() => {
+      customElements.define(
+        'lazy-player',
+        class extends HTMLElement {
+          constructor() {
+            super();
+            const video = makeVideo();
+            video.style.width = '100%';
+            this.attachShadow({ mode: 'closed' }).append(video);
+            window.closedVideos[this.id] = video;
+          }
+        },
+      );
+      window.lazyDefined = true;
+    }, 500);
+  });
+</script>

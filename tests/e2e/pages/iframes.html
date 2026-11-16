@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>iframes</title>
+<video id="v" src="/media/clip.webm" preload="auto" muted></video>
+<iframe name="same" src="/plain.html"></iframe>
+<iframe name="cross" src="http://127.0.0.1:3211/plain.html"></iframe>
+<iframe name="sandboxed" sandbox="allow-scripts" src="/plain.html"></iframe>
+<iframe
+  name="srcdoc"
+  srcdoc="<video id='v' src='http://localhost:3211/media/clip.webm' preload='auto' muted></video>"
+></iframe>
+<iframe name="blank"></iframe>
+<script>
+  // An about:blank frame the parent fills itself, as ad and player SDKs do.
+  const doc = document.querySelector('iframe[name=blank]').contentDocument;
+  const video = doc.createElement('video');
+  video.id = 'v';
+  video.src = 'http://localhost:3211/media/clip.webm';
+  video.preload = 'auto';
+  video.muted = true;
+  doc.body.append(video);
+</script>
