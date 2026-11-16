@@ -32,7 +32,7 @@ The extension has no server and makes no network requests. Everything comes from
 | API | Gives us |
 |---|---|
 | `HTMLMediaElement.playbackRate`, `ratechange`, `loadstart`, `loadedmetadata`, `durationchange` | Setting and observing each video's speed and noticing a new source. |
-| `MutationObserver`, `Element.shadowRoot`, closed shadow roots via `chrome.dom.openOrClosedShadowRoot` (Chrome) and `element.openOrClosedShadowRoot()` (Firefox) | Finding videos wherever the page puts them. |
+| `MutationObserver`, `Element.shadowRoot`, closed shadow roots via `chrome.dom.openOrClosedShadowRoot(element)` (Chrome) and the read-only `element.openOrClosedShadowRoot` property (Firefox) | Finding videos wherever the page puts them. |
 | `storage.sync` | Settings and the site list, synced across the user's signed-in browsers. |
 | `commands` | Browser-level shortcuts that never clash with typing or site shortcuts. |
 | `action.setBadgeText` per tab | The badge. |

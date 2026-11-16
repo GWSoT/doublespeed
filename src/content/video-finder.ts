@@ -118,25 +118,25 @@ function isCustomElement(el: Element): boolean {
   return el.localName.includes('-');
 }
 
-interface ChromeDomApi {
+interface DomApi {
   openOrClosedShadowRoot(element: HTMLElement): ShadowRoot | null | undefined;
 }
-type FirefoxElement = Element & { openOrClosedShadowRoot?: () => ShadowRoot | null };
+/** Firefox exposes closed roots to content scripts as a read-only property, not a method. */
+type FirefoxElement = Element & { readonly openOrClosedShadowRoot?: ShadowRoot | null };
 
 /**
  * An element's shadow root, open or closed. Content scripts may read closed roots: Chrome
- * through `chrome.dom.openOrClosedShadowRoot`, Firefox through
- * `element.openOrClosedShadowRoot()`. The closed lookup only runs for custom elements,
+ * through `chrome.dom.openOrClosedShadowRoot(element)`, Firefox through the
+ * `element.openOrClosedShadowRoot` property. The closed lookup only runs for custom elements,
  * where players keep their closed roots, to keep the per-element cost low.
  */
 function shadowRootOf(el: Element): ShadowRoot | null {
   if (el.shadowRoot) return el.shadowRoot;
   if (!isCustomElement(el)) return null;
   try {
-    const firefoxLookup = (el as FirefoxElement).openOrClosedShadowRoot;
-    if (typeof firefoxLookup === 'function') return firefoxLookup.call(el) ?? null;
-    const chromeDom = (globalThis as { chrome?: { dom?: ChromeDomApi } }).chrome?.dom;
-    if (chromeDom && el instanceof HTMLElement) return chromeDom.openOrClosedShadowRoot(el) ?? null;
+    const dom = (globalThis as { chrome?: { dom?: DomApi } }).chrome?.dom;
+    if (dom?.openOrClosedShadowRoot && el instanceof HTMLElement) return dom.openOrClosedShadowRoot(el) ?? null;
+    return (el as FirefoxElement).openOrClosedShadowRoot ?? null;
   } catch {
     // Not a valid shadow host.
   }
