@@ -35,7 +35,7 @@ export default defineContentScript({
     const findVideos = () => {
       if (finding) return;
       finding = true;
-      watchForVideos(document, (video) => engine.track(video), ctx.signal);
+      watchForVideos(document, (video) => engine.track(video), ctx.signal, reporter.changed);
     };
 
     // Rule 6, live. A site turned on after load starts the finder, which picks up every video.

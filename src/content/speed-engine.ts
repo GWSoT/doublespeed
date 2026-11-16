@@ -5,6 +5,7 @@
 import type { SpeedCommand } from '../lib/speed-commands';
 import { pickVideo, type FrameVideo } from '../lib/tab-speed';
 import {
+  HAVE_METADATA,
   onControl,
   onDefaultChange,
   onDisable,
@@ -52,7 +53,10 @@ export interface ControlledVideo {
 export interface SpeedEngineOptions extends EngineSettings {
   /** The latest trusted input in this frame, on the `performance.now()` clock. */
   lastInputAt: () => number | null;
-  /** Called after anything that can change `frameVideo()`. */
+  /**
+   * Called after anything that can change `frameVideo()`. The video finder's `onMoved` should
+   * call it too: a video leaving the page fires no media event.
+   */
   onChange?: () => void;
   signal: AbortSignal;
 }
@@ -181,7 +185,10 @@ export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
       const videos: FrameVideo[] = [];
       forEachTracked((video) => {
         const state = states.get(video);
+        // Only a video still in the page, still on the source the rules saw, with metadata: a
+        // player that empties a video (`removeAttribute('src')`, `load()`) leaves no source.
         if (!state || state.status === 'waiting' || !video.isConnected) return;
+        if (state.source !== sourceKey(video) || video.readyState < HAVE_METADATA) return;
         videos.push({
           speed: video.playbackRate,
           playing: !video.paused && !video.ended,

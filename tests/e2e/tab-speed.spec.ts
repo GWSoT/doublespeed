@@ -26,6 +26,33 @@ test.describe('the badge', () => {
     await expect(popup.getByRole('group', { name: 'This tab' }).locator('output')).toHaveText('No video');
   });
 
+  test('clears when the page removes its only video, and comes back when it returns', async ({ context, page }) => {
+    await page.goto('/plain.html');
+    await expect.poll(() => badge(context, page)).toBe('2×');
+
+    await page.evaluate(() => {
+      const video = document.querySelector('video')!;
+      (window as unknown as { removed: HTMLVideoElement }).removed = video;
+      video.remove();
+    });
+    await expect.poll(() => badge(context, page)).toBe('');
+
+    await page.evaluate(() => document.body.append((window as unknown as { removed: HTMLVideoElement }).removed));
+    await expect.poll(() => badge(context, page)).toBe('2×');
+  });
+
+  test('clears when the player empties its only video', async ({ context, page }) => {
+    await page.goto('/plain.html');
+    await expect.poll(() => badge(context, page)).toBe('2×');
+
+    await page.evaluate(() => {
+      const video = document.querySelector('video')!;
+      video.removeAttribute('src');
+      video.load();
+    });
+    await expect.poll(() => badge(context, page)).toBe('');
+  });
+
   test('follows the shortcuts', async ({ context, page }) => {
     await page.goto('/plain.html');
     await expect.poll(() => badge(context, page)).toBe('2×');
