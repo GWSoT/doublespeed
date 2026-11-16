@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>speed-menu</title>
+<video id="v" src="/media/clip.webm?item=1" muted preload="auto"></video>
+<div id="menu">
+  <button data-rate="0.5">0.5×</button>
+  <button data-rate="1">1×</button>
+  <button data-rate="1.5">1.5×</button>
+  <button data-rate="2">2×</button>
+</div>
+<button id="next">Next video</button>
+<script>
+  // A player with its own speed menu, like most big video sites.
+  const video = document.getElementById('v');
+  let item = 1;
+  for (const button of document.querySelectorAll('#menu button')) {
+    button.addEventListener('click', () => {
+      video.playbackRate = Number(button.dataset.rate);
+    });
+  }
+  document.getElementById('next').addEventListener('click', () => {
+    video.src = `/media/clip.webm?item=${++item}`;
+  });
+  // The player quietly putting its own speed back, with no input (a re-render, an ad SDK).
+  window.player = {
+    resetSpeed: () => {
+      video.playbackRate = 1;
+    },
+  };
+</script>

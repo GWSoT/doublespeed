@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>fighting</title>
+<video id="v" src="/media/clip.webm" muted preload="auto"></video>
+<script>
+  // A player that insists on 1× and puts it back after every change.
+  const video = document.getElementById('v');
+  window.rateChanges = 0;
+  video.addEventListener('ratechange', () => {
+    window.rateChanges++;
+    if (video.playbackRate !== 1) video.playbackRate = 1;
+  });
+</script>

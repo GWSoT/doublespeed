@@ -85,7 +85,9 @@ For each video, in each frame:
 2. **Our change.** Before setting a speed we record it as expected; the `ratechange` that
    matches is ignored.
 3. **User change.** A `ratechange` within ~1 s of a trusted `pointerdown` or `keydown` in that
-   frame becomes the video's override.
+   frame becomes the video's override, if that input came after rule 1 applied the default to
+   the current source. A click on "next video" happens before the new source loads, so the
+   site's reset that follows it is rule 4, not a choice.
 4. **Site reset.** Any other `ratechange` is re-set to the target speed. If a site resets more
    than ~5 times in ~10 s for one source, we stop fighting that source so we don't loop.
 5. **Our controls.** Shortcuts and the popup's −/+ set an override on every video in the tab

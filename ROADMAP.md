@@ -30,7 +30,7 @@ videos ever played at 1×?*
 
 ---
 
-## Phase 1 — Every video at 2× — **NOT STARTED**
+## Phase 1 — Every video at 2× — **IN PROGRESS**
 
 Load the extension unpacked in Chrome and every video on the web plays at the default speed:
 the core rules, the site list and a minimal popup, tested end to end.
@@ -38,13 +38,13 @@ the core rules, the site list and a minimal popup, tested end to end.
 | Decision | Chosen | Rejected alternative | Reasoning |
 |---|---|---|---|
 | Finding videos | `MutationObserver` on the document and on every reachable shadow root (open, and closed via `openOrClosedShadowRoot`), plus capture-phase `play`/`loadstart` listeners as a safety net | Patching `attachShadow` from a main-world script | Stays in the isolated world on both browsers; patching page prototypes is fragile and visible to sites. |
-| Who changed the speed | A ~1 s window after a trusted `pointerdown`/`keydown` in the frame | Ignoring all outside changes | Without it, every YouTube video would stay at 1× after its reset. |
+| Who changed the speed | A ~1 s window after a trusted `pointerdown`/`keydown` in the frame, counting only input made after the default was applied to the current source | Ignoring all outside changes; counting any recent input | Without the window, every YouTube video would stay at 1× after its reset. Without the "after" condition, clicking "next" would read as choosing 1× (risk 1). |
 | Page site in iframes | Ask the background, which reads `sender.tab.url` | `location.ancestorOrigins` | Firefox doesn't have it. |
 | Test pages | Local fixtures served by Playwright on :3211 | Testing against live YouTube in CI | Real sites change, need logins, and rate-limit CI. Real sites stay a manual checklist. |
 
 **Slices:**
 
-1. **Video finder and default speed.** Every `<video>` is found, whether in the light DOM, open or closed shadow roots, iframes, or added later. It gets the default speed on each new source, and live videos are skipped. Comes with the Playwright harness and fixture pages. — [#1](https://github.com/GWSoT/doublespeed/issues/1)
+1. **Video finder and default speed.** Every `<video>` is found, whether in the light DOM, open or closed shadow roots, iframes, or added later. It gets the default speed on each new source, and live videos are skipped. Comes with the Playwright harness and fixture pages. — [#1](https://github.com/GWSoT/doublespeed/issues/1), done in [#8](https://github.com/GWSoT/doublespeed/pull/8)
 2. **The speed rules.** User override vs. site reset, the fight back-off, and a YouTube-style fixture that resets to 1× per video. — [#2](https://github.com/GWSoT/doublespeed/issues/2)
 3. **Settings and the site list.** The `storage.sync` schema, install seeding (2×, `music.youtube.com`), the page site for iframes, and settings changes applied live. — [#3](https://github.com/GWSoT/doublespeed/issues/3)
 4. **Popup, first version.** The on/off switch for the page site and the default speed control. — [#4](https://github.com/GWSoT/doublespeed/issues/4)
@@ -126,7 +126,7 @@ Doublespeed is live on the Chrome Web Store and addons.mozilla.org.
 
 ## Where this plan is most likely to go wrong
 
-1. **The click-then-reset race.** A user clicks "next video", and the site resets the new video to 1× within a second. The rules read that as the user's choice, so the video stays at 1×. *Find out:* a fixture that reproduces it in Phase 1 slice 2, then YouTube autoplay and playlist checks. *Fallback:* only count input that lands on the player's own controls, or ignore changes to exactly 1× right after a new source.
+1. **The click-then-reset race.** A user clicks "next video", and the site resets the new video to 1× within a second. A plain input window reads that as the user's choice, so the video stays at 1×. *Mitigated in slice 2:* input only counts when it comes after the default was applied to the current source, and the click on "next" always comes before. `youtube.html` reproduces the race: it fails without that condition and passes with it. *Still to check:* YouTube autoplay and playlists on the Phase 1 real-site checklist.
 2. **Sites that fight back.** A player that re-sets the rate on every `ratechange` (some DRM players, ad SDKs) could loop with us. *Find out:* the back-off counter, plus Netflix, Twitch VODs and news-site players on the Phase 1 checklist.
 3. **Videos we can't reach.** Closed shadow roots created before our script runs, sandboxed iframes, `srcdoc` and `about:blank` frames. *Find out:* one fixture per case in slice 1.
 4. **Chrome Web Store's in-depth review of `<all_urls>`.** It can take weeks or reject a vague justification. *Find out early:* upload an unlisted build as soon as Phase 2 is done, to learn the review time before launch matters.
