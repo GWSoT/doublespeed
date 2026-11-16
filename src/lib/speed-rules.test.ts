@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  onControl,
   onDefaultChange,
   onDisable,
   onMedia,
@@ -167,6 +168,59 @@ describe('onRateChange', () => {
       const state: VideoState = { ...appliedAt2(), status };
       expect(onRateChange(state, snap({ playbackRate: 1 }), 100, null, DEFAULT).action).toEqual({ kind: 'none' });
     }
+  });
+});
+
+describe('onControl (rule 5: our controls)', () => {
+  it('moves the video and makes the new speed its override', () => {
+    const step = onControl(appliedAt2(), snap({ playbackRate: DEFAULT }), 'speed-up', DEFAULT)!;
+    expect(step.speed).toBe(2.25);
+    expect(step.action).toEqual({ kind: 'set-rate', rate: 2.25 });
+    expect(step.state).toMatchObject({ override: 2.25, expected: [2.25] });
+  });
+
+  it('its own echo is ours, and a later site reset goes back to the new speed', () => {
+    const step = onControl(appliedAt2(), snap({ playbackRate: DEFAULT }), 'slow-down', DEFAULT)!;
+    const echo = onRateChange(step.state, snap({ playbackRate: 1.75 }), 1000, null, DEFAULT);
+    expect(echo.state).toMatchObject({ override: 1.75, expected: [] });
+    const reset = onRateChange(echo.state, snap({ playbackRate: 1 }), 2000, null, DEFAULT);
+    expect(reset.action).toEqual({ kind: 'set-rate', rate: 1.75 });
+  });
+
+  it('steps from the video’s own speed, including the user’s earlier choice', () => {
+    const overridden = onRateChange(appliedAt2(), snap({ playbackRate: 1.5 }), 1000, 900, DEFAULT).state;
+    expect(onControl(overridden, snap({ playbackRate: 1.5 }), 'speed-up', DEFAULT)!.speed).toBe(1.75);
+  });
+
+  it('toggle-speed goes to 1× and back to the default', () => {
+    const toOne = onControl(appliedAt2(), snap({ playbackRate: DEFAULT }), 'toggle-speed', DEFAULT)!;
+    expect(toOne.action).toEqual({ kind: 'set-rate', rate: 1 });
+    const back = onControl(toOne.state, snap({ playbackRate: 1 }), 'toggle-speed', DEFAULT)!;
+    expect(back.action).toEqual({ kind: 'set-rate', rate: DEFAULT });
+    expect(back.state.override).toBe(DEFAULT);
+  });
+
+  it('at the end of the range: no change to make, but the speed still becomes the override', () => {
+    const atMax = onControl(appliedAt2(), snap({ playbackRate: 4 }), 'speed-up', DEFAULT)!;
+    expect(atMax.action).toEqual({ kind: 'none' });
+    expect(atMax.state.override).toBe(4);
+  });
+
+  it('takes back a source the site wore us down on', () => {
+    const yielded: VideoState = { ...appliedAt2(), status: 'yielded', resets: [1, 2, 3, 4, 5, 6] };
+    const step = onControl(yielded, snap({ playbackRate: 1 }), 'speed-up', DEFAULT)!;
+    expect(step.action).toEqual({ kind: 'set-rate', rate: 1.25 });
+    expect(step.state).toMatchObject({ status: 'applied', resets: [], override: 1.25 });
+  });
+
+  it('leaves alone videos with no metadata yet, live videos and unseen sources', () => {
+    expect(onControl(undefined, snap(), 'speed-up', DEFAULT)).toBeNull();
+    for (const status of ['waiting', 'live'] as const) {
+      const state: VideoState = { ...appliedAt2(), status };
+      expect(onControl(state, snap({ playbackRate: DEFAULT }), 'speed-up', DEFAULT)).toBeNull();
+    }
+    const otherSource = snap({ source: '2|https://example.com/b.webm', playbackRate: DEFAULT });
+    expect(onControl(appliedAt2(), otherSource, 'speed-up', DEFAULT)).toBeNull();
   });
 });
 

@@ -91,7 +91,10 @@ For each video, in each frame:
 4. **Site reset.** Any other `ratechange` is re-set to the target speed. If a site resets more
    than ~5 times in ~10 s for one source, we stop fighting that source so we don't loop.
 5. **Our controls.** Shortcuts and the popup's −/+ set an override on every video in the tab
-   and show the speed label.
+   and show the speed label over the ones in view. Up and down step from each video's own
+   speed; the toggle sends any speed other than 1× to 1×, and 1× to the default. A source the
+   site wore us down on (rule 4) is taken back. Live videos, and every video on a disabled
+   site, are left alone.
 6. **Settings change, applied live.** A new default speed moves every video without an
    override. Disabling the page site restores every video to its remembered speed and drops
    its overrides. Enabling it applies the default speed, as if each video were seen for the

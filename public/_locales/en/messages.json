@@ -17,6 +17,18 @@
       }
     }
   },
+  "commandSpeedUp": {
+    "message": "Speed up the videos in this tab",
+    "description": "Shown next to the Alt+. shortcut in the browser's keyboard shortcut settings."
+  },
+  "commandSlowDown": {
+    "message": "Slow down the videos in this tab",
+    "description": "Shown next to the Alt+, shortcut in the browser's keyboard shortcut settings."
+  },
+  "commandToggleSpeed": {
+    "message": "Switch between 1× and your default speed",
+    "description": "Shown next to the Alt+R shortcut in the browser's keyboard shortcut settings."
+  },
   "popupSiteSwitch": {
     "message": "Speed up videos on $SITE$",
     "description": "Accessible name of the popup's on/off switch for the site in the address bar.",

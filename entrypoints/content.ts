@@ -1,7 +1,9 @@
 import { watchFrameSettings } from '../src/content/frame-settings';
 import { createSpeedEngine, type EngineSettings } from '../src/content/speed-engine';
+import { createSpeedLabels } from '../src/content/speed-label';
 import { trackUserInput } from '../src/content/user-input';
 import { watchForVideos } from '../src/content/video-finder';
+import { isSpeedCommandMessage } from '../src/lib/speed-commands';
 
 // Every frame of every page, before page scripts run (SPEC §5, ADR-0003).
 export default defineContentScript({
@@ -32,5 +34,19 @@ export default defineContentScript({
     };
     // On a disabled page site nothing runs until the site is turned back on (rule 1).
     if (settings.enabled) findVideos();
+
+    // Rule 5: a shortcut or the popup's −/+, sent to every frame in the tab. Each frame moves
+    // its own videos and labels the ones the user can see.
+    const labels = createSpeedLabels(
+      document,
+      (speed) => browser.i18n.getMessage('speedValue', [String(speed)]),
+      ctx.signal,
+    );
+    const onMessage = (message: unknown) => {
+      if (!isSpeedCommandMessage(message)) return;
+      for (const { video, speed } of engine.control(message.command)) labels.show(video, speed);
+    };
+    browser.runtime.onMessage.addListener(onMessage);
+    ctx.signal.addEventListener('abort', () => browser.runtime.onMessage.removeListener(onMessage), { once: true });
   },
 });

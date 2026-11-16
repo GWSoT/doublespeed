@@ -62,17 +62,19 @@ the core rules, the site list and a minimal popup, tested end to end.
 
 ---
 
-## Phase 2 — Controls and feedback — **NOT STARTED**
+## Phase 2 — Controls and feedback — **IN PROGRESS**
 
 Change the speed of any player, including ones without a speed menu, and always see what speed you're on.
 
-**Slices:**
-- **Speed controls:** the `commands` shortcuts (`Alt+.`, `Alt+,`, `Alt+R`) and the popup's −/+ for this tab, both acting on every frame in the tab.
-- **Toolbar badge:** shows the tab's speed, or `off` on disabled sites.
-- **Speed label:** the brief on-video label, isolated in a shadow root and moved into the fullscreen element when needed.
-- **First-run hint:** the one-time shortcut hint in the popup.
+| Decision | Chosen | Rejected alternative | Reasoning |
+|---|---|---|---|
+| Speed label over fullscreen | A manual popover in a closed shadow root, re-opened on each show | Moving the label into the fullscreen element | The top layer puts it above any player, including a fullscreen `<video>`, which can't hold a child element. No z-index to win. |
 
-[#5](https://github.com/GWSoT/doublespeed/issues/5)
+**Slices:** ([#5](https://github.com/GWSoT/doublespeed/issues/5))
+
+1. **Speed controls and the speed label.** The `commands` shortcuts (`Alt+.`, `Alt+,`, `Alt+R`) act on every frame in the tab, and the brief on-video label shows the new speed, fullscreen included. — [#12](https://github.com/GWSoT/doublespeed/issues/12)
+2. **The tab's speed.** The toolbar badge shows it, or `off` on disabled sites, and the popup's −/+ changes it. — [#13](https://github.com/GWSoT/doublespeed/issues/13)
+3. **First-run hint:** the one-time shortcut hint in the popup. — [#14](https://github.com/GWSoT/doublespeed/issues/14)
 
 **Exit test:** on an X video:
 - `Alt+.` shows a `2.25×` label on the video and `2.25` on the badge.
