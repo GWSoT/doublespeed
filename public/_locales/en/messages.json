@@ -6,5 +6,71 @@
   "extDescription": {
     "message": "Plays every web video at 2× by default. Change the speed per video, or turn it off per site.",
     "description": "One-line store and browser description."
+  },
+  "speedValue": {
+    "message": "$SPEED$×",
+    "description": "A playback speed, such as 2× or 1.75×.",
+    "placeholders": {
+      "speed": {
+        "content": "$1",
+        "example": "1.75"
+      }
+    }
+  },
+  "popupSiteSwitch": {
+    "message": "Speed up videos on $SITE$",
+    "description": "Accessible name of the popup's on/off switch for the site in the address bar.",
+    "placeholders": {
+      "site": {
+        "content": "$1",
+        "example": "youtube.com"
+      }
+    }
+  },
+  "popupSiteSwitchUnavailable": {
+    "message": "Speed up videos on this page",
+    "description": "Accessible name of the popup's on/off switch on a page the extension can't run on, where the switch is disabled."
+  },
+  "popupSiteOn": {
+    "message": "Videos play at your default speed.",
+    "description": "Under the site name when the extension is on for the site."
+  },
+  "popupSiteOff": {
+    "message": "Off. The site sets the speed.",
+    "description": "Under the site name when the user has turned the extension off for the site."
+  },
+  "popupSiteLocked": {
+    "message": "Off for all of $PATTERN$ by a rule in your site list.",
+    "description": "Under the site name when a rule covering the site and its subdomains turns it off, so the switch can't turn it on.",
+    "placeholders": {
+      "pattern": {
+        "content": "$1",
+        "example": "*.youtube.com"
+      }
+    }
+  },
+  "popupPageRestricted": {
+    "message": "Browsers don't let extensions run on this page.",
+    "description": "Shown instead of the site switch on browser pages (settings, new tab) and the extension stores."
+  },
+  "popupPageNoSite": {
+    "message": "This page isn't on a website, so there's no site to turn off.",
+    "description": "Shown instead of the site switch on local files, which have no site name."
+  },
+  "popupDefaultSpeed": {
+    "message": "Default speed",
+    "description": "Label of the popup's control for the speed every video starts at."
+  },
+  "popupDefaultSlower": {
+    "message": "Lower the default speed",
+    "description": "Accessible name of the − button next to the default speed."
+  },
+  "popupDefaultFaster": {
+    "message": "Raise the default speed",
+    "description": "Accessible name of the + button next to the default speed."
+  },
+  "popupSaveFailed": {
+    "message": "Couldn't save the change. Try again.",
+    "description": "Shown in the popup when the browser refuses to save a setting."
   }
 }

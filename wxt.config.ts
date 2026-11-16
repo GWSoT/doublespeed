@@ -12,7 +12,10 @@ export default defineConfig({
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
     default_locale: 'en',
+    // The only two permissions (SPEC §6). The content script's `<all_urls>` match lets it run
+    // everywhere; the host permission also lets the popup read the active tab's URL.
     permissions: ['storage'],
+    host_permissions: ['<all_urls>'],
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {
