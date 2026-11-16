@@ -16,23 +16,38 @@ export type OnVideo = (video: HTMLVideoElement) => void;
 
 const HTML_NS = 'http://www.w3.org/1999/xhtml';
 
-export function watchForVideos(doc: Document, onVideo: OnVideo, signal: AbortSignal): void {
+/**
+ * `onMoved` is called once per mutation batch that removed nodes or put back a video or shadow
+ * root already seen, since either can take a video out of the page or bring it back without a
+ * media event.
+ */
+export function watchForVideos(doc: Document, onVideo: OnVideo, signal: AbortSignal, onMoved?: () => void): void {
   const observedRoots = new WeakSet<Document | ShadowRoot>();
   const seenVideos = new WeakSet<HTMLVideoElement>();
+  /** Set while scanning a batch when a video or shadow root already seen turns up again. */
+  let sawKnown = false;
   /** Custom elements seen without a shadow root, re-checked until the page has loaded. */
   let rootless: Set<Element> | null = new Set();
 
   const observer = new MutationObserver((records) => {
+    let moved = false;
+    sawKnown = false;
     for (const record of records) {
+      if (record.removedNodes.length) moved = true;
       for (const node of record.addedNodes) {
         if (node.nodeType === Node.ELEMENT_NODE) scan(node as Element);
       }
     }
+    if ((moved || sawKnown) && onMoved) onMoved();
   });
   signal.addEventListener('abort', () => observer.disconnect(), { once: true });
 
   function observeRoot(root: Document | ShadowRoot): void {
-    if (observedRoots.has(root)) return;
+    if (observedRoots.has(root)) {
+      // A player put back into the page: the tree walk doesn't enter its shadow root.
+      sawKnown = true;
+      return;
+    }
     observedRoots.add(root);
     observer.observe(root, { childList: true, subtree: true });
     scan(root);
@@ -45,9 +60,13 @@ export function watchForVideos(doc: Document, onVideo: OnVideo, signal: AbortSig
   }
 
   function visit(el: Element): void {
-    if (isVideo(el) && !seenVideos.has(el)) {
-      seenVideos.add(el);
-      onVideo(el);
+    if (isVideo(el)) {
+      if (seenVideos.has(el)) {
+        sawKnown = true;
+      } else {
+        seenVideos.add(el);
+        onVideo(el);
+      }
     }
     checkHost(el);
   }

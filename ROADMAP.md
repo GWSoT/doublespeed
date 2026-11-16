@@ -73,7 +73,7 @@ Change the speed of any player, including ones without a speed menu, and always 
 **Slices:** ([#5](https://github.com/GWSoT/doublespeed/issues/5))
 
 1. **Speed controls and the speed label.** The `commands` shortcuts (`Alt+.`, `Alt+,`, `Alt+R`) act on every frame in the tab, and the brief on-video label shows the new speed, fullscreen included. — [#12](https://github.com/GWSoT/doublespeed/issues/12)
-2. **The tab's speed.** The toolbar badge shows it, or `off` on disabled sites, and the popup's −/+ changes it. — [#13](https://github.com/GWSoT/doublespeed/issues/13)
+2. **The tab's speed.** The toolbar badge shows it, or `off` on disabled sites, and the popup's −/+ changes it. Each frame reports its video to the background, which keeps the tab's reports in `storage.session`. — [#13](https://github.com/GWSoT/doublespeed/issues/13)
 3. **First-run hint:** the one-time shortcut hint in the popup. — [#14](https://github.com/GWSoT/doublespeed/issues/14)
 
 **Exit test:** on an X video:

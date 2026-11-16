@@ -3,7 +3,9 @@
  * `src/lib/speed-rules.ts`; this file only reads videos and carries the decisions out.
  */
 import type { SpeedCommand } from '../lib/speed-commands';
+import { pickVideo, type FrameVideo } from '../lib/tab-speed';
 import {
+  HAVE_METADATA,
   onControl,
   onDefaultChange,
   onDisable,
@@ -17,6 +19,8 @@ import {
 
 /** Media events after which rule 1's answer for a video can change. */
 const MEDIA_EVENTS = ['loadstart', 'loadedmetadata', 'durationchange', 'play'] as const;
+/** Media events that only change which video is the frame's (`frameVideo`). */
+const PLAYBACK_EVENTS = ['pause', 'ended', 'emptied'] as const;
 
 /** What the engine needs from the settings. */
 export interface EngineSettings {
@@ -34,6 +38,11 @@ export interface SpeedEngine {
    * those videos with their new speed, for the speed label. Nothing on a disabled page site.
    */
   control(command: SpeedCommand): ControlledVideo[];
+  /**
+   * The frame's video for the badge and the popup: the one playing, else the one played last,
+   * else any the rules have seen with metadata. Null when there's none, or the site is disabled.
+   */
+  frameVideo(): FrameVideo | null;
 }
 
 export interface ControlledVideo {
@@ -44,6 +53,11 @@ export interface ControlledVideo {
 export interface SpeedEngineOptions extends EngineSettings {
   /** The latest trusted input in this frame, on the `performance.now()` clock. */
   lastInputAt: () => number | null;
+  /**
+   * Called after anything that can change `frameVideo()`. The video finder's `onMoved` should
+   * call it too: a video leaving the page fires no media event.
+   */
+  onChange?: () => void;
   signal: AbortSignal;
 }
 
@@ -54,6 +68,9 @@ export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
   const tracked = new Set<WeakRef<HTMLVideoElement>>();
   /** Bumped on every `loadstart`, so reloading the same URL still counts as a new source. */
   const loads = new WeakMap<HTMLVideoElement, number>();
+  /** When each video last started playing, in ms since the epoch, comparable across frames. */
+  const playedAt = new WeakMap<HTMLVideoElement, number>();
+  const changed = () => options.onChange?.();
   /** Stable ids for `srcObject` sources, which have no URL. */
   const objectIds = new WeakMap<object, number>();
   let nextObjectId = 1;
@@ -86,6 +103,7 @@ export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
   function onMediaEvent(video: HTMLVideoElement): void {
     if (!enabled) return;
     carryOut(video, onMedia(states.get(video), snapshot(video), performance.now(), defaultSpeed));
+    changed();
   }
 
   function onRateChangeEvent(video: HTMLVideoElement): void {
@@ -93,6 +111,7 @@ export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
     if (!enabled || !state) return;
     const now = performance.now();
     carryOut(video, onRateChange(state, snapshot(video), now, options.lastInputAt(), defaultSpeed));
+    changed();
   }
 
   function forEachTracked(fn: (video: HTMLVideoElement) => void): void {
@@ -112,11 +131,14 @@ export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
           type,
           () => {
             if (type === 'loadstart') loads.set(video, (loads.get(video) ?? 0) + 1);
+            if (type === 'play') playedAt.set(video, Date.now());
             onMediaEvent(video);
           },
           listen,
         );
       }
+      for (const type of PLAYBACK_EVENTS) video.addEventListener(type, changed, listen);
+      if (!video.paused) playedAt.set(video, Date.now());
       video.addEventListener('ratechange', () => onRateChangeEvent(video), listen);
       onMediaEvent(video);
     },
@@ -142,6 +164,7 @@ export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
           if (state) carryOut(video, onDefaultChange(state, snapshot(video), previousDefault, defaultSpeed));
         });
       }
+      changed();
     },
 
     control(command) {
@@ -153,7 +176,26 @@ export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
         carryOut(video, step);
         controlled.push({ video, speed: step.speed });
       });
+      changed();
       return controlled;
+    },
+
+    frameVideo() {
+      if (!enabled) return null;
+      const videos: FrameVideo[] = [];
+      forEachTracked((video) => {
+        const state = states.get(video);
+        // Only a video still in the page, still on the source the rules saw, with metadata: a
+        // player that empties a video (`removeAttribute('src')`, `load()`) leaves no source.
+        if (!state || state.status === 'waiting' || !video.isConnected) return;
+        if (state.source !== sourceKey(video) || video.readyState < HAVE_METADATA) return;
+        videos.push({
+          speed: video.playbackRate,
+          playing: !video.paused && !video.ended,
+          playedAt: playedAt.get(video) ?? 0,
+        });
+      });
+      return pickVideo(videos);
     },
   };
 }

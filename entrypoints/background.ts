@@ -1,6 +1,8 @@
+import { createTabBadges } from '../src/background/tab-badges';
 import { hostOfUrl, isGetPageSite } from '../src/lib/page-site';
 import { installSeed, SETTINGS_KEY } from '../src/lib/settings';
 import { isSpeedCommand, speedCommandMessage } from '../src/lib/speed-commands';
+import { isFrameStateMessage } from '../src/lib/tab-speed';
 
 // The service worker on Chrome, an event page on Firefox (SPEC §5). Listeners are registered
 // synchronously, so the browser can wake it for each event.
@@ -20,6 +22,15 @@ export default defineBackground(() => {
     // `sendResponse` rather than a returned promise: Chrome 120 doesn't take promises here.
     sendResponse(hostOfUrl(sender.tab?.url));
   });
+
+  // The badge: every frame reports its video, and the badge shows the tab's (SPEC §1).
+  const badges = createTabBadges();
+  browser.runtime.onMessage.addListener((message, sender) => {
+    const tabId = sender.tab?.id;
+    if (!isFrameStateMessage(message) || tabId === undefined) return;
+    badges.report(tabId, sender.frameId ?? 0, message.doc, message.state);
+  });
+  browser.tabs.onRemoved.addListener((tabId) => badges.forget(tabId));
 
   // The shortcuts (ADR-0005). With no `frameId`, the message reaches every frame in the tab.
   browser.commands.onCommand.addListener(async (command, tab) => {

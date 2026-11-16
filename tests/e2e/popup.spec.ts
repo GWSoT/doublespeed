@@ -14,6 +14,7 @@ const rateOf = (target: Page | Frame) =>
 const siteSwitch = (popup: Page) => popup.getByRole('switch');
 const slower = (popup: Page) => popup.getByRole('button', { name: 'Lower the default speed' });
 const faster = (popup: Page) => popup.getByRole('button', { name: 'Raise the default speed' });
+const defaultShown = (popup: Page) => popup.getByRole('group', { name: 'Default speed' }).locator('output');
 const defaultSpeed = async (storage: { get(key: string): Promise<unknown> }) =>
   ((await storage.get('settings')) as { defaultSpeed: number }).defaultSpeed;
 
@@ -83,16 +84,16 @@ test.describe('the default speed', () => {
     await page.goto('/plain.html');
     await expect.poll(() => rateOf(page)).toBe(DEFAULT);
     const popup = await openPopup(context, page);
-    await expect(popup.locator('output')).toHaveText('2×');
+    await expect(defaultShown(popup)).toHaveText('2×');
 
     await faster(popup).click();
-    await expect(popup.locator('output')).toHaveText('2.25×');
+    await expect(defaultShown(popup)).toHaveText('2.25×');
     await expect.poll(() => defaultSpeed(storage)).toBe(2.25);
     await expect.poll(() => rateOf(page)).toBe(2.25);
 
     await slower(popup).click();
     await slower(popup).click();
-    await expect(popup.locator('output')).toHaveText('1.75×');
+    await expect(defaultShown(popup)).toHaveText('1.75×');
     await expect.poll(() => defaultSpeed(storage)).toBe(1.75);
     await expect.poll(() => rateOf(page)).toBe(1.75);
   });
@@ -100,12 +101,12 @@ test.describe('the default speed', () => {
   test('quick clicks each count', async ({ context, page, storage }) => {
     await page.goto('/plain.html');
     const popup = await openPopup(context, page);
-    await expect(popup.locator('output')).toHaveText('2×');
+    await expect(defaultShown(popup)).toHaveText('2×');
     // Four clicks in one task, so no write has finished before the next click.
     await faster(popup).evaluate((button: HTMLButtonElement) => {
       for (let i = 0; i < 4; i++) button.click();
     });
-    await expect(popup.locator('output')).toHaveText('3×');
+    await expect(defaultShown(popup)).toHaveText('3×');
     await expect.poll(() => defaultSpeed(storage)).toBe(3);
     await expect.poll(() => rateOf(page)).toBe(3);
   });
@@ -114,12 +115,12 @@ test.describe('the default speed', () => {
     await storage.setDefaultSpeed(4);
     await page.goto('/plain.html');
     const popup = await openPopup(context, page);
-    await expect(popup.locator('output')).toHaveText('4×');
+    await expect(defaultShown(popup)).toHaveText('4×');
     await expect(faster(popup)).toBeDisabled();
     await expect(slower(popup)).toBeEnabled();
 
     await storage.setDefaultSpeed(0.25);
-    await expect(popup.locator('output')).toHaveText('0.25×');
+    await expect(defaultShown(popup)).toHaveText('0.25×');
     await expect(slower(popup)).toBeDisabled();
   });
 

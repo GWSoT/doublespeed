@@ -1,7 +1,9 @@
 <script lang="ts">
-  // The popup, first version (SPEC §1, ADR-0005): the switch for the page site and the default
-  // speed. Everything it shows comes from `storage.sync`; every content script picks up its
-  // writes from `storage.onChanged`, so videos react without a reload.
+  // The popup (SPEC §1, ADR-0005): the switch for the page site, this tab's speed and the default
+  // speed. The switch and the default live in `storage.sync`; every content script picks up the
+  // popup's writes from `storage.onChanged`, so videos react without a reload. The tab's speed
+  // comes from the frames' reports in `storage.session` (the badge's), and −/+ sends the same
+  // message to the tab as the shortcuts.
   import { onMount } from 'svelte';
   import {
     applyChanges,
@@ -14,12 +16,16 @@
   } from '../../src/lib/settings';
   import { siteSwitch } from '../../src/lib/site-switch';
   import { canStepSpeed, stepSpeed } from '../../src/lib/speed';
+  import { speedCommandMessage, type SpeedCommand } from '../../src/lib/speed-commands';
+  import { parseTabFrames, tabKey, tabSpeed, type TabFrames } from '../../src/lib/tab-speed';
 
   type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
   const t = (key: MessageName, ...substitutions: string[]) => browser.i18n.getMessage(key, substitutions);
   const speedLabel = (speed: number) => t('speedValue', String(speed));
 
   let tabUrl = $state<string | undefined>();
+  let tabId = $state<number | undefined>();
+  let frames = $state.raw<TabFrames>({});
   let stored = $state.raw<Stored | null>(null);
   let saveFailed = $state(false);
   /** Writes not yet finished. Reads wait for them, so a quick second click builds on the first. */
@@ -27,6 +33,7 @@
 
   const site = $derived(stored && siteSwitch(tabUrl, stored.rules));
   const defaultSpeed = $derived(stored?.settings.defaultSpeed);
+  const tab = $derived(tabSpeed(frames));
 
   async function refresh() {
     if (writing) return;
@@ -39,20 +46,39 @@
     if (!writing) stored = parseStored(items);
   }
 
+  async function refreshTab() {
+    if (tabId === undefined) return;
+    const key = tabKey(tabId);
+    try {
+      frames = parseTabFrames((await browser.storage.session.get(key))[key]);
+    } catch {
+      frames = {};
+    }
+  }
+
   onMount(() => {
-    // Listening before the first read, so nothing changed meanwhile is missed.
+    // Listening before the first reads, so nothing changed meanwhile is missed.
     const onChanged = () => void refresh();
+    const onSessionChanged = (changes: Record<string, unknown>) => {
+      if (tabId !== undefined && tabKey(tabId) in changes) void refreshTab();
+    };
     browser.storage.sync.onChanged.addListener(onChanged);
+    browser.storage.session.onChanged.addListener(onSessionChanged);
     void (async () => {
       try {
         // The URL is hidden on pages we have no access to, which `siteSwitch` reports.
-        tabUrl = (await browser.tabs.query({ active: true, currentWindow: true }))[0]?.url;
+        const [active] = await browser.tabs.query({ active: true, currentWindow: true });
+        tabUrl = active?.url;
+        tabId = active?.id;
       } catch {
         tabUrl = undefined;
       }
-      await refresh();
+      await Promise.all([refresh(), refreshTab()]);
     })();
-    return () => browser.storage.sync.onChanged.removeListener(onChanged);
+    return () => {
+      browser.storage.sync.onChanged.removeListener(onChanged);
+      browser.storage.session.onChanged.removeListener(onSessionChanged);
+    };
   });
 
   /** Shows `items` at once, then saves them. `undefined` removes an item. */
@@ -81,6 +107,14 @@
     } else if (site?.state === 'off') {
       void save({ [siteKey(site.pattern)]: undefined });
     }
+  }
+
+  /** −/+ for this tab: the shortcuts' message, to every frame. The display follows the reports. */
+  function stepTab(command: SpeedCommand) {
+    if (tabId === undefined) return;
+    browser.tabs.sendMessage(tabId, speedCommandMessage(command)).catch(() => {
+      // The tab's content scripts are gone (it navigated); the reports will say so.
+    });
   }
 
   function stepDefault(direction: 1 | -1) {
@@ -123,6 +157,31 @@
       >
         <span class="knob"></span>
       </button>
+    </section>
+
+    <section class="row speed">
+      <span class="label" id="tab-speed-label">{t('popupTabSpeed')}</span>
+      <div class="stepper" role="group" aria-labelledby="tab-speed-label">
+        <button
+          aria-label={t('commandSlowDown')}
+          disabled={tab.kind !== 'speed' || !canStepSpeed(tab.speed, -1)}
+          onclick={() => stepTab('slow-down')}>−</button
+        >
+        <output aria-live="polite" class:quiet={tab.kind !== 'speed'}>
+          {#if tab.kind === 'speed'}
+            {speedLabel(tab.speed)}
+          {:else if tab.kind === 'off'}
+            {t('popupTabOff')}
+          {:else}
+            {t('popupTabNoVideo')}
+          {/if}
+        </output>
+        <button
+          aria-label={t('commandSpeedUp')}
+          disabled={tab.kind !== 'speed' || !canStepSpeed(tab.speed, 1)}
+          onclick={() => stepTab('speed-up')}>+</button
+        >
+      </div>
     </section>
 
     <section class="row speed">
@@ -277,10 +336,15 @@
     opacity: 0.4;
   }
   output {
-    min-width: 3.25rem;
+    min-width: 4.5rem;
     text-align: center;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+  }
+  output.quiet {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.8rem;
   }
 
   .error {

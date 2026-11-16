@@ -69,6 +69,22 @@
     "message": "This page isn't on a website, so there's no site to turn off.",
     "description": "Shown instead of the site switch on local files, which have no site name."
   },
+  "popupTabSpeed": {
+    "message": "This tab",
+    "description": "Label of the popup's control for the speed of the videos in the current tab."
+  },
+  "popupTabNoVideo": {
+    "message": "No video",
+    "description": "In place of this tab's speed in the popup, when the tab has no video."
+  },
+  "popupTabOff": {
+    "message": "Off",
+    "description": "In place of this tab's speed in the popup, when the site is turned off."
+  },
+  "badgeOff": {
+    "message": "off",
+    "description": "Toolbar badge on a site the user turned off. Keep it to 3 or 4 characters."
+  },
   "popupDefaultSpeed": {
     "message": "Default speed",
     "description": "Label of the popup's control for the speed every video starts at."
