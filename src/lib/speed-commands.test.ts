@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { commandedSpeed, isSpeedCommand, isSpeedCommandMessage, speedCommandMessage } from './speed-commands';
+import {
+  commandedSpeed,
+  isSpeedCommand,
+  isSpeedCommandMessage,
+  shortcutText,
+  speedCommandMessage,
+} from './speed-commands';
 import { MAX_SPEED, MIN_SPEED } from './speed';
 
 const DEFAULT = 2;
@@ -30,6 +36,19 @@ describe('commandedSpeed', () => {
     expect(commandedSpeed('toggle-speed', 1, DEFAULT)).toBe(DEFAULT);
     expect(commandedSpeed('toggle-speed', 1, 3)).toBe(3);
     expect(commandedSpeed('toggle-speed', 1.0000000001, DEFAULT)).toBe(DEFAULT);
+  });
+});
+
+describe('shortcutText', () => {
+  it('shows Firefox’s key names as the keys', () => {
+    expect(shortcutText('Alt+Period')).toBe('Alt+.');
+    expect(shortcutText('Alt+Comma')).toBe('Alt+,');
+    expect(shortcutText('Alt+R')).toBe('Alt+R');
+  });
+
+  it('leaves Chrome’s as they are', () => {
+    expect(shortcutText('⌥.')).toBe('⌥.');
+    expect(shortcutText('Ctrl+Shift+Period')).toBe('Ctrl+Shift+.');
   });
 });
 
