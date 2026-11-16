@@ -47,7 +47,7 @@ the core rules, the site list and a minimal popup, tested end to end.
 1. **Video finder and default speed.** Every `<video>` is found, whether in the light DOM, open or closed shadow roots, iframes, or added later. It gets the default speed on each new source, and live videos are skipped. Comes with the Playwright harness and fixture pages. — [#1](https://github.com/GWSoT/doublespeed/issues/1), done in [#8](https://github.com/GWSoT/doublespeed/pull/8)
 2. **The speed rules.** User override vs. site reset, the fight back-off, and a YouTube-style fixture that resets to 1× per video. — [#2](https://github.com/GWSoT/doublespeed/issues/2), done in [#9](https://github.com/GWSoT/doublespeed/pull/9)
 3. **Settings and the site list.** The `storage.sync` schema, install seeding (2×, `music.youtube.com`), the page site for iframes, and settings changes applied live. — [#3](https://github.com/GWSoT/doublespeed/issues/3), done in [#10](https://github.com/GWSoT/doublespeed/pull/10)
-4. **Popup, first version.** The on/off switch for the page site and the default speed control. — [#4](https://github.com/GWSoT/doublespeed/issues/4)
+4. **Popup, first version.** The on/off switch for the page site and the default speed control. — [#4](https://github.com/GWSoT/doublespeed/issues/4), done in [#11](https://github.com/GWSoT/doublespeed/pull/11)
 
 **Exit test:**
 - **Fixtures:** the Playwright suite passes in CI against every fixture.
@@ -72,9 +72,9 @@ Change the speed of any player, including ones without a speed menu, and always 
 
 **Slices:** ([#5](https://github.com/GWSoT/doublespeed/issues/5))
 
-1. **Speed controls and the speed label.** The `commands` shortcuts (`Alt+.`, `Alt+,`, `Alt+R`) act on every frame in the tab, and the brief on-video label shows the new speed, fullscreen included. — [#12](https://github.com/GWSoT/doublespeed/issues/12)
-2. **The tab's speed.** The toolbar badge shows it, or `off` on disabled sites, and the popup's −/+ changes it. Each frame reports its video to the background, which keeps the tab's reports in `storage.session`. — [#13](https://github.com/GWSoT/doublespeed/issues/13)
-3. **First-run hint:** the one-time shortcut hint in the popup. — [#14](https://github.com/GWSoT/doublespeed/issues/14)
+1. **Speed controls and the speed label.** The `commands` shortcuts (`Alt+.`, `Alt+,`, `Alt+R`) act on every frame in the tab, and the brief on-video label shows the new speed, fullscreen included. — [#12](https://github.com/GWSoT/doublespeed/issues/12), done in [#15](https://github.com/GWSoT/doublespeed/pull/15)
+2. **The tab's speed.** The toolbar badge shows it, or `off` on disabled sites, and the popup's −/+ changes it. Each frame reports its video to the background, which keeps the tab's reports in `storage.session`. — [#13](https://github.com/GWSoT/doublespeed/issues/13), done in [#16](https://github.com/GWSoT/doublespeed/pull/16)
+3. **First-run hint:** the one-time shortcut hint in the popup. — [#14](https://github.com/GWSoT/doublespeed/issues/14), done in [#17](https://github.com/GWSoT/doublespeed/pull/17)
 
 **Exit test:** on an X video:
 - `Alt+.` shows a `2.25×` label on the video and `2.25` on the badge.
