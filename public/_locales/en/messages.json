@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Doublespeed",
+    "description": "Extension name shown in the browser and the stores."
+  },
+  "extDescription": {
+    "message": "Plays every web video at 2× by default. Change the speed per video, or turn it off per site.",
+    "description": "One-line store and browser description."
+  }
+}

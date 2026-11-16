@@ -1,0 +1,36 @@
+# The local checks on every pull request to main and every push to it: `make lint`, `make test`.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: make lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: make install
+      - run: make lint
+      - run: make test
+      - run: make zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: doublespeed-zips
+          path: .output/*.zip
+          if-no-files-found: error

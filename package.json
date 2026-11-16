@@ -1,0 +1,32 @@
+{
+  "name": "doublespeed",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plays every web video at 2× by default.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "lint:firefox": "wxt build -b firefox && web-ext lint --source-dir .output/firefox-mv3",
+    "test": "vitest run",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@wxt-dev/module-svelte": "^2.0.5",
+    "svelte": "^5.57.3",
+    "svelte-check": "^4.7.8",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0",
+    "web-ext": "^10.8.0",
+    "wxt": "^0.21.5"
+  }
+}
