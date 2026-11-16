@@ -29,8 +29,10 @@ Single-context: one extension, one vocabulary (SPEC §3).
 ├── SPEC.md                 ← system specification; §3 is the glossary
 ├── ROADMAP.md              ← phases, decisions and rejected alternatives
 ├── wxt.config.ts           ← WXT config; generates manifest.json for both browsers
-├── entrypoints/            ← WXT entrypoints: popup/ (and content.ts, background.ts, options/ later)
+├── entrypoints/            ← WXT entrypoints: content.ts, popup/ (background.ts, options/ later)
 ├── src/lib/                ← browser-independent logic + its Vitest tests
+├── src/content/            ← the content script's DOM side: video finder, speed engine
+├── tests/e2e/              ← Playwright specs, fixture pages, test clips, fixture server
 ├── public/_locales/        ← i18n messages; every UI string lives here
 ├── assets/                 ← icon source
 ├── docs/

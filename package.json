@@ -18,9 +18,12 @@
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "lint:firefox": "wxt build -b firefox && web-ext lint --source-dir .output/firefox-mv3",
     "test": "vitest run",
+    "e2e": "wxt build && playwright test",
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^24.19.2",
     "@wxt-dev/module-svelte": "^2.0.5",
     "svelte": "^5.57.3",
     "svelte-check": "^4.7.8",

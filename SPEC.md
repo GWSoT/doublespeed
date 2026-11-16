@@ -32,7 +32,7 @@ The extension has no server and makes no network requests. Everything comes from
 | API | Gives us |
 |---|---|
 | `HTMLMediaElement.playbackRate`, `ratechange`, `loadstart`, `loadedmetadata`, `durationchange` | Setting and observing each video's speed and noticing a new source. |
-| `MutationObserver`, `Element.shadowRoot`, closed shadow roots via `chrome.dom.openOrClosedShadowRoot` (Chrome) and `element.openOrClosedShadowRoot()` (Firefox) | Finding videos wherever the page puts them. |
+| `MutationObserver`, `Element.shadowRoot`, closed shadow roots via `chrome.dom.openOrClosedShadowRoot(element)` (Chrome) and the read-only `element.openOrClosedShadowRoot` property (Firefox) | Finding videos wherever the page puts them. |
 | `storage.sync` | Settings and the site list, synced across the user's signed-in browsers. |
 | `commands` | Browser-level shortcuts that never clash with typing or site shortcuts. |
 | `action.setBadgeText` per tab | The badge. |
@@ -131,7 +131,13 @@ Overrides never sync and never survive a reload.
 
 - `entrypoints/` holds WXT entrypoints: `background.ts`, `content.ts`, `popup/`, `options/`.
 - `src/lib/` holds browser-independent logic (site patterns, speed steps, the rules as a
-  state machine), unit tested with Vitest.
+  state machine), unit tested with Vitest. `src/content/` holds the content script's DOM
+  side: the video finder and the speed engine that carries out the rules.
+- The video finder observes the document and every reachable shadow root. It looks up closed
+  roots only on custom elements, to keep the cost per element low. A custom element that
+  gets its shadow root after insertion is checked again at `DOMContentLoaded` and `load`.
+  After that, a click inside it reveals it. A player defined after load that autoplays
+  without a click is the known gap.
 - `tests/e2e/` holds Playwright tests that load the built extension into Chromium and drive
   local fixture pages: a YouTube-style player that resets to 1× per video, iframes, open and
   closed shadow DOM, a live stream, and videos added after load.

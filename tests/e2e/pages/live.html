@@ -1,0 +1,33 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>live</title>
+<video id="control" src="/media/clip.webm" preload="auto" muted></video>
+<video id="live" muted></video>
+<video id="turns-live" muted></video>
+<script>
+  // Live streams are MediaSource streams with an unbounded duration, like HLS.js and DASH
+  // players produce. `live` is unbounded from the start; `turns-live` becomes unbounded only
+  // after the extension has sped it up.
+  async function stream(video, { liveFromStart }) {
+    const source = new MediaSource();
+    video.src = URL.createObjectURL(source);
+    await new Promise((resolve) => source.addEventListener('sourceopen', resolve, { once: true }));
+    if (liveFromStart) source.duration = Infinity;
+    const buffer = source.addSourceBuffer('video/webm; codecs="vp9"');
+    buffer.appendBuffer(await (await fetch('/media/clip-video.webm')).arrayBuffer());
+    await new Promise((resolve) => buffer.addEventListener('updateend', resolve, { once: true }));
+    return source;
+  }
+
+  stream(document.getElementById('live'), { liveFromStart: true });
+
+  const turnsLive = document.getElementById('turns-live');
+  stream(turnsLive, { liveFromStart: false }).then((source) => {
+    const goLive = () => {
+      window.turnsLiveWasSpedUp = true;
+      source.duration = Infinity;
+    };
+    if (turnsLive.playbackRate === 2) goLive();
+    else turnsLive.addEventListener('ratechange', goLive, { once: true });
+  });
+</script>

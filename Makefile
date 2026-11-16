@@ -1,4 +1,4 @@
-.PHONY: help install dev dev-firefox test lint build zip
+.PHONY: help install dev dev-firefox test e2e lint build zip
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -14,6 +14,10 @@ dev-firefox: ## The same in Firefox
 
 test: ## Run the unit tests
 	npm test
+
+e2e: ## Build for Chrome, then run the Playwright suite (fixture server on :3211)
+	npm run build
+	npx playwright test
 
 lint: ## Typecheck TS and Svelte, then build for Firefox and run Mozilla's web-ext lint
 	npm run check
