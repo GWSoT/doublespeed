@@ -90,6 +90,54 @@ test.describe('shadow DOM', () => {
   });
 });
 
+test.describe('players defined late, like Reddit’s', () => {
+  const playerVideo = (id: string) => document.getElementById(id)!.shadowRoot!.querySelector('video')!.playbackRate;
+  const flag = (name: string) => (window as unknown as Record<string, unknown>)[name] === true;
+
+  test('a player defined after DOMContentLoaded gets the default speed before load', async ({ page }) => {
+    // Hold the page's image back, so `load` can't fire while the player is checked.
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route('**/held.png', async (route) => {
+      await held;
+      await route.abort();
+    });
+    try {
+      await page.goto('/defined-late.html', { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(flag, 'earlyDefined');
+      await expectRate(page, playerVideo, DEFAULT, 'early');
+      expect(await page.evaluate(() => document.readyState)).not.toBe('complete');
+    } finally {
+      release();
+    }
+  });
+
+  test('a player defined after load is found on the page’s next DOM change, without a click', async ({ page }) => {
+    await page.goto('/defined-late.html');
+    await page.waitForFunction(flag, 'afterDefined');
+    await expectRate(page, playerVideo, DEFAULT, 'after');
+  });
+
+  test('a player inside a shadow root taken out and put back is still found once defined', async ({ page }) => {
+    await page.goto('/defined-late.html');
+    await page.evaluate(async () => {
+      const nextTask = () => new Promise((resolve) => setTimeout(resolve, 50));
+      const box = document.getElementById('box')!;
+      box.remove();
+      await nextTask(); // A mutation batch runs while the player is out of the page.
+      document.body.append(box);
+      await nextTask();
+      const page = window as unknown as { definePlayer(name: string): void; pageActivity(): void };
+      page.definePlayer('inner-player');
+      page.pageActivity();
+    });
+    const innerVideo = () =>
+      document.getElementById('box')!.shadowRoot!.getElementById('inner')!.shadowRoot!.querySelector('video')!
+        .playbackRate;
+    await expectRate(page, innerVideo, DEFAULT);
+  });
+});
+
 test('live streams are left alone, even one that turns live after being sped up', async ({ page }) => {
   await page.goto('/live.html');
   await expectRate(page, plainVideo, DEFAULT, 'control');

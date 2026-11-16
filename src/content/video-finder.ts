@@ -7,8 +7,11 @@
  * - Every reachable shadow root gets its own `MutationObserver`, because mutations inside a
  *   shadow tree don't reach an observer on the document.
  * - A custom element can get its shadow root after it's inserted, when it's defined later.
- *   Those are checked again at `DOMContentLoaded` and `load`, and on any click that lands
- *   inside them.
+ *   `customElements.define` upgrades it without a DOM mutation, so one still undefined is
+ *   checked again after every mutation batch until it's defined: pages go on changing the DOM
+ *   around a definition (on Reddit, within milliseconds). A defined one without a shadow root
+ *   is checked again at `DOMContentLoaded` and `load`. A click that lands inside any custom
+ *   element checks it too.
  * - Capture-phase `loadstart`/`play` listeners catch light-DOM videos however they appear.
  */
 
@@ -26,12 +29,19 @@ export function watchForVideos(doc: Document, onVideo: OnVideo, signal: AbortSig
   const seenVideos = new WeakSet<HTMLVideoElement>();
   /** Set while scanning a batch when a video or shadow root already seen turns up again. */
   let sawKnown = false;
-  /** Custom elements seen without a shadow root, re-checked until the page has loaded. */
+  /**
+   * Custom elements not defined yet, re-checked after every mutation batch while they wait.
+   * One taken out of the page stays here, since a player put back whole isn't rescanned; the
+   * set holds it weakly, so the page can still drop it for good.
+   */
+  const undefinedHosts = new IterableWeakSet<Element>();
+  /** Defined custom elements seen without a shadow root, re-checked until the page has loaded. */
   let rootless: Set<Element> | null = new Set();
 
   const observer = new MutationObserver((records) => {
     let moved = false;
     sawKnown = false;
+    recheckUndefined();
     for (const record of records) {
       if (record.removedNodes.length) moved = true;
       for (const node of record.addedNodes) {
@@ -74,30 +84,43 @@ export function watchForVideos(doc: Document, onVideo: OnVideo, signal: AbortSig
   function checkHost(el: Element): void {
     const root = shadowRootOf(el);
     if (root) {
+      undefinedHosts.delete(el);
       rootless?.delete(el);
       observeRoot(root);
-    } else if (rootless && isCustomElement(el)) {
-      rootless.add(el);
+    } else if (isCustomElement(el)) {
+      if (!el.matches(':defined')) undefinedHosts.add(el);
+      else rootless?.add(el);
     }
   }
 
-  function recheckRootless(): void {
-    if (rootless) for (const el of [...rootless]) checkHost(el);
+  /** Only the definition is checked here, which is cheap: an upgrade is what attaches the root. */
+  function recheckUndefined(): void {
+    for (const el of undefinedHosts) {
+      if (el.matches(':defined')) {
+        undefinedHosts.delete(el);
+        checkHost(el);
+      }
+    }
+  }
+
+  /** At the load milestones every waiting element gets a full check, declarative roots included. */
+  function recheckAll(): void {
+    for (const el of [...undefinedHosts, ...(rootless ?? [])]) checkHost(el);
   }
 
   const listen = { capture: true, passive: true, signal };
 
   if (doc.readyState === 'complete') {
     // Injected into a frame that has already loaded (an about:blank frame, an extension
-    // update): load won't fire again, so clicks are the only re-check from the start.
+    // update): load won't fire again, so a defined element is re-checked only on a click.
     rootless = null;
   } else {
-    doc.addEventListener('DOMContentLoaded', recheckRootless, { once: true, signal });
+    doc.addEventListener('DOMContentLoaded', recheckAll, { once: true, signal });
     doc.defaultView?.addEventListener(
       'load',
       () => {
-        recheckRootless();
-        rootless = null; // After load, clicks are the only re-check; nothing accumulates.
+        recheckAll();
+        rootless = null; // After load, a defined element is re-checked only on a click.
       },
       { once: true, signal },
     );
@@ -160,4 +183,33 @@ function shadowRootOf(el: Element): ShadowRoot | null {
     // Not a valid shadow host.
   }
   return null;
+}
+
+/** A set that can be iterated but doesn't keep its members alive. */
+class IterableWeakSet<T extends object> {
+  readonly #refs = new Set<WeakRef<T>>();
+  readonly #refOf = new WeakMap<T, WeakRef<T>>();
+
+  add(value: T): void {
+    if (this.#refOf.has(value)) return;
+    const ref = new WeakRef(value);
+    this.#refOf.set(value, ref);
+    this.#refs.add(ref);
+  }
+
+  delete(value: T): void {
+    const ref = this.#refOf.get(value);
+    if (!ref) return;
+    this.#refOf.delete(value);
+    this.#refs.delete(ref);
+  }
+
+  /** The members still alive. Ones collected since are forgotten along the way. */
+  *[Symbol.iterator](): Generator<T> {
+    for (const ref of this.#refs) {
+      const value = ref.deref();
+      if (value) yield value;
+      else this.#refs.delete(ref);
+    }
+  }
 }
