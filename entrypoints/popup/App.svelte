@@ -16,7 +16,7 @@
   } from '../../src/lib/settings';
   import { siteSwitch } from '../../src/lib/site-switch';
   import { canStepSpeed, stepSpeed } from '../../src/lib/speed';
-  import { speedCommandMessage, type SpeedCommand } from '../../src/lib/speed-commands';
+  import { SPEED_COMMANDS, shortcutText, speedCommandMessage, type SpeedCommand } from '../../src/lib/speed-commands';
   import { parseTabFrames, tabKey, tabSpeed, type TabFrames } from '../../src/lib/tab-speed';
 
   type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
@@ -27,6 +27,8 @@
   let tabId = $state<number | undefined>();
   let frames = $state.raw<TabFrames>({});
   let stored = $state.raw<Stored | null>(null);
+  /** The speed shortcuts as the browser has them bound; unbound ones are left out. */
+  let shortcuts = $state.raw<{ command: SpeedCommand; keys: string }[]>([]);
   let saveFailed = $state(false);
   /** Writes not yet finished. Reads wait for them, so a quick second click builds on the first. */
   let writing = 0;
@@ -34,6 +36,12 @@
   const site = $derived(stored && siteSwitch(tabUrl, stored.rules));
   const defaultSpeed = $derived(stored?.settings.defaultSpeed);
   const tab = $derived(tabSpeed(frames));
+  const showHint = $derived(stored !== null && !stored.settings.shortcutHintDismissed && shortcuts.length > 0);
+  const HINT_LABELS = {
+    'speed-up': 'popupHintSpeedUp',
+    'slow-down': 'popupHintSlowDown',
+    'toggle-speed': 'popupHintToggle',
+  } as const satisfies Record<SpeedCommand, MessageName>;
 
   async function refresh() {
     if (writing) return;
@@ -75,6 +83,17 @@
       }
       await Promise.all([refresh(), refreshTab()]);
     })();
+    void (async () => {
+      try {
+        const bound = await browser.commands.getAll();
+        shortcuts = SPEED_COMMANDS.flatMap((command) => {
+          const keys = bound.find((c) => c.name === command)?.shortcut;
+          return keys ? [{ command, keys: shortcutText(keys) }] : [];
+        });
+      } catch {
+        shortcuts = [];
+      }
+    })();
     return () => {
       browser.storage.sync.onChanged.removeListener(onChanged);
       browser.storage.session.onChanged.removeListener(onSessionChanged);
@@ -115,6 +134,11 @@
     browser.tabs.sendMessage(tabId, speedCommandMessage(command)).catch(() => {
       // The tab's content scripts are gone (it navigated); the reports will say so.
     });
+  }
+
+  function dismissHint() {
+    if (!stored) return;
+    void save({ [SETTINGS_KEY]: { ...stored.settings, shortcutHintDismissed: true } });
   }
 
   function stepDefault(direction: 1 | -1) {
@@ -200,6 +224,19 @@
         >
       </div>
     </section>
+
+    {#if showHint}
+      <section class="hint" aria-labelledby="hint-title">
+        <h2 id="hint-title">{t('popupHintTitle')}</h2>
+        <dl>
+          {#each shortcuts as { command, keys } (command)}
+            <dt><kbd>{keys}</kbd></dt>
+            <dd>{t(HINT_LABELS[command])}</dd>
+          {/each}
+        </dl>
+        <button class="dismiss" onclick={dismissHint}>{t('popupHintDismiss')}</button>
+      </section>
+    {/if}
 
     {#if saveFailed}
       <p class="error" role="alert">{t('popupSaveFailed')}</p>
@@ -345,6 +382,58 @@
     color: var(--muted);
     font-weight: 400;
     font-size: 0.8rem;
+  }
+
+  .hint {
+    margin: 0.25rem 0 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--button);
+    font-size: 0.8rem;
+  }
+  .hint h2 {
+    margin: 0 0 0.375rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .hint dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.25rem 0.625rem;
+    align-items: center;
+    margin: 0 0 0.5rem;
+  }
+  .hint dt,
+  .hint dd {
+    margin: 0;
+  }
+  .hint dd {
+    color: var(--muted);
+  }
+  kbd {
+    display: inline-block;
+    min-width: 2.25rem;
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid var(--line);
+    border-radius: 0.25rem;
+    background: var(--bg);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+  .dismiss {
+    padding: 0.25rem 0.625rem;
+    border: none;
+    border-radius: 0.375rem;
+    background: var(--accent);
+    color: var(--bg);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .dismiss:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .error {

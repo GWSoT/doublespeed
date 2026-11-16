@@ -5,6 +5,7 @@
  */
 import type { Frame, Page } from '@playwright/test';
 import { expect, frameByUrl, openPopup, test } from './extension';
+import { shortcutText } from '../../src/lib/speed-commands';
 
 const DEFAULT = 2;
 
@@ -134,3 +135,34 @@ test.describe('the default speed', () => {
       .toEqual({ v: 1, defaultSpeed: 2.25, shortcutHintDismissed: true });
   });
 });
+
+test.describe('the shortcut hint', () => {
+  const hint = (popup: Page) => popup.getByRole('region', { name: 'Change the speed from the keyboard' });
+
+  test('shows the shortcuts as the browser has them bound, until dismissed', async ({ context, page, storage }) => {
+    const worker = context.serviceWorkers()[0]!;
+    const bound = await worker.evaluate(async () =>
+      (await chrome.commands.getAll()).filter((c) => c.name !== '_execute_action').map((c) => [c.name, c.shortcut]),
+    );
+    const keys = Object.fromEntries(bound.map(([name, shortcut]) => [name, shortcutText(shortcut!)]));
+
+    await page.goto('/plain.html');
+    const popup = await openPopup(context, page);
+    await expect(hint(popup)).toBeVisible();
+    await expect(hint(popup).locator('kbd')).toHaveText([keys['speed-up']!, keys['slow-down']!, keys['toggle-speed']!]);
+    await expect(hint(popup).locator('dd')).toHaveText(['Faster', 'Slower', '1× and back']);
+
+    await hint(popup).getByRole('button', { name: 'Got it' }).click();
+    await expect(hint(popup)).toBeHidden();
+    await expect
+      .poll(() => storage.get('settings'))
+      .toEqual({ v: 1, defaultSpeed: 2, shortcutHintDismissed: true });
+
+    await popup.close();
+    const again = await openPopup(context, page);
+    await expect(defaultShown(again)).toHaveText('2×');
+    await expect(hint(again)).toBeHidden();
+  });
+});
+
+declare const chrome: typeof browser;

@@ -33,6 +33,14 @@ export function isSpeedCommandMessage(message: unknown): message is SpeedCommand
 }
 
 /**
+ * A shortcut as the browser reports it (`commands.getAll()`), readable in a sentence. Firefox
+ * names the keys (`Alt+Period`); Chrome already shows them (`Alt+.`, or `⌥.` on macOS).
+ */
+export function shortcutText(shortcut: string): string {
+  return shortcut.replace(/\bPeriod\b/g, '.').replace(/\bComma\b/g, ',');
+}
+
+/**
  * The speed a video playing at `speed` moves to. Up and down go one step from the video's own
  * speed. The toggle sends any speed other than 1× to 1×, and 1× to the default.
  */

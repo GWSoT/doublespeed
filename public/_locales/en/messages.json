@@ -97,6 +97,26 @@
     "message": "Raise the default speed",
     "description": "Accessible name of the + button next to the default speed."
   },
+  "popupHintTitle": {
+    "message": "Change the speed from the keyboard",
+    "description": "Heading of the popup's one-time hint listing the extension's keyboard shortcuts."
+  },
+  "popupHintSpeedUp": {
+    "message": "Faster",
+    "description": "In the shortcut hint, next to the speed-up shortcut (Alt+.)."
+  },
+  "popupHintSlowDown": {
+    "message": "Slower",
+    "description": "In the shortcut hint, next to the slow-down shortcut (Alt+,)."
+  },
+  "popupHintToggle": {
+    "message": "1× and back",
+    "description": "In the shortcut hint, next to the shortcut that switches between 1× and the default speed (Alt+R)."
+  },
+  "popupHintDismiss": {
+    "message": "Got it",
+    "description": "Button that hides the shortcut hint for good."
+  },
   "popupSaveFailed": {
     "message": "Couldn't save the change. Try again.",
     "description": "Shown in the popup when the browser refuses to save a setting."
