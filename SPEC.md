@@ -93,8 +93,9 @@ For each video, in each frame:
 5. **Our controls.** Shortcuts and the popup's −/+ set an override on every video in the tab
    and show the speed label.
 6. **Settings change, applied live.** A new default speed moves every video without an
-   override. Disabling the page site restores every video to its remembered speed. Enabling
-   it applies the target speed.
+   override. Disabling the page site restores every video to its remembered speed and drops
+   its overrides. Enabling it applies the default speed, as if each video were seen for the
+   first time.
 
 ## 4. Data model
 
@@ -104,6 +105,10 @@ For each video, in each frame:
 |---|---|---|
 | `settings` | `{ v: 1, defaultSpeed: number, shortcutHintDismissed: boolean }` | `defaultSpeed` is 2 on install. |
 | `site:<pattern>` | `{ disabled: true, added: string }` | One item per pattern, so the list never hits the 8 KB per-item limit. Seeded on install with `site:music.youtube.com`. Later: an optional `speed` for per-site speeds. |
+
+Install seeding is skipped when `settings` already exists: sync brought the user's settings and
+site list from another browser, and those win. A missing or invalid value falls back to its
+default, so a bad item never stops the rules.
 
 Per-video state lives in memory only, in a `WeakMap<HTMLVideoElement, VideoState>` in each
 frame's content script: source key, speed before we touched it, override, reset counter.
