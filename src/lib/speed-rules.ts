@@ -105,6 +105,34 @@ export function onMedia(prev: VideoState | undefined, snap: VideoSnapshot, now: 
 }
 
 /**
+ * Rule 6, a new default speed (`from` → `to`): moves a video the rules are applying to, unless
+ * the user chose its speed (an override wins over the default for that source).
+ *
+ * A video at neither the old default nor the speed we just set has a `ratechange` on its way
+ * that we haven't seen: the user's pick, or a site reset. That video is left for rules 3–4,
+ * which settle it against the new default when the event arrives. Moving it now would turn
+ * the user's pick into a pick of the new default.
+ */
+export function onDefaultChange(prev: VideoState, snap: VideoSnapshot, from: number, to: number): Step {
+  if (prev.status !== 'applied' || prev.source !== snap.source || prev.override !== null) {
+    return { state: prev, action: NONE };
+  }
+  const rate = snap.playbackRate;
+  if (rate === to || (rate !== from && rate !== prev.expected)) return { state: prev, action: NONE };
+  return setRate(prev, to);
+}
+
+/**
+ * Rule 6, the page site turned off: puts back the speed the video had before we changed it.
+ * The rules stop there; the caller drops the state, and turning the site back on starts the
+ * video over at rule 1, as a video seen for the first time.
+ */
+export function onDisable(prev: VideoState, snap: VideoSnapshot): VideoAction {
+  if (prev.status !== 'applied' || prev.source !== snap.source || prev.rateBefore === null) return NONE;
+  return snap.playbackRate === prev.rateBefore ? NONE : { kind: 'set-rate', rate: prev.rateBefore };
+}
+
+/**
  * Rules 2–4, on `ratechange`. `lastInputAt` is the time of the latest trusted `pointerdown`
  * or `keydown` in the video's frame, on the same clock as `now`.
  */

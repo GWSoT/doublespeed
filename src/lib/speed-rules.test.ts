@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  onDefaultChange,
+  onDisable,
   onMedia,
   onRateChange,
   RESET_LIMIT,
@@ -165,5 +167,66 @@ describe('onRateChange', () => {
       const state: VideoState = { ...appliedAt2(), status };
       expect(onRateChange(state, snap({ playbackRate: 1 }), 100, null, DEFAULT).action).toEqual({ kind: 'none' });
     }
+  });
+});
+
+describe('rule 6: settings changed live', () => {
+  it('a new default moves a video with no override', () => {
+    const step = onDefaultChange(appliedAt2(), snap({ playbackRate: DEFAULT }), DEFAULT, 3);
+    expect(step.action).toEqual({ kind: 'set-rate', rate: 3 });
+    expect(step.state.expected).toBe(3);
+  });
+
+  it('a new default moves a video whose echo of our last change hasn’t arrived yet', () => {
+    const applied = onMedia(undefined, snap(), 0, DEFAULT).state;
+    expect(onDefaultChange(applied, snap({ playbackRate: DEFAULT }), DEFAULT, 3).action).toEqual({
+      kind: 'set-rate',
+      rate: 3,
+    });
+  });
+
+  it('a new default leaves the user’s override alone', () => {
+    const overridden = onRateChange(appliedAt2(), snap({ playbackRate: 1.5 }), 1000, 900, DEFAULT).state;
+    expect(onDefaultChange(overridden, snap({ playbackRate: 1.5 }), DEFAULT, 3).action).toEqual({ kind: 'none' });
+  });
+
+  it('a new default leaves a video whose ratechange is still on its way to rules 3–4', () => {
+    // The user picked 1.5× a moment ago; its ratechange hasn't been handled yet.
+    const pending = onDefaultChange(appliedAt2(), snap({ playbackRate: 1.5 }), DEFAULT, 3);
+    expect(pending.action).toEqual({ kind: 'none' });
+    // When it arrives, rule 3 makes it the override, and rule 4 would undo a site reset to the new default.
+    expect(onRateChange(pending.state, snap({ playbackRate: 1.5 }), 1000, 990, 3).state.override).toBe(1.5);
+    expect(onRateChange(pending.state, snap({ playbackRate: 1 }), 1000, null, 3).action).toEqual({
+      kind: 'set-rate',
+      rate: 3,
+    });
+  });
+
+  it('a new default leaves videos the rules aren’t applying to alone', () => {
+    for (const status of ['waiting', 'live', 'yielded'] as const) {
+      const state: VideoState = { ...appliedAt2(), status };
+      expect(onDefaultChange(state, snap({ playbackRate: DEFAULT }), DEFAULT, 3).action).toEqual({ kind: 'none' });
+    }
+    const otherSource = onDefaultChange(appliedAt2(), snap({ source: '2|https://example.com/b.webm' }), DEFAULT, 3);
+    expect(otherSource.action).toEqual({ kind: 'none' });
+  });
+
+  it('turning the site off puts back the speed the video had before', () => {
+    expect(onDisable(appliedAt2(), snap({ playbackRate: DEFAULT }))).toEqual({ kind: 'set-rate', rate: 1 });
+    const fromHalf = onMedia(undefined, snap({ playbackRate: 0.5 }), 0, DEFAULT).state;
+    expect(onDisable(fromHalf, snap({ playbackRate: DEFAULT }))).toEqual({ kind: 'set-rate', rate: 0.5 });
+  });
+
+  it('turning the site off restores the earlier speed over the user’s override too', () => {
+    const overridden = onRateChange(appliedAt2(), snap({ playbackRate: 1.5 }), 1000, 900, DEFAULT).state;
+    expect(onDisable(overridden, snap({ playbackRate: 1.5 }))).toEqual({ kind: 'set-rate', rate: 1 });
+  });
+
+  it('turning the site off leaves alone what the rules weren’t applying to', () => {
+    for (const status of ['waiting', 'live', 'yielded'] as const) {
+      const state: VideoState = { ...appliedAt2(), status };
+      expect(onDisable(state, snap({ playbackRate: 1.5 }))).toEqual({ kind: 'none' });
+    }
+    expect(onDisable(appliedAt2(), snap({ playbackRate: 1 }))).toEqual({ kind: 'none' });
   });
 });

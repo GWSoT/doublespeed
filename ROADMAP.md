@@ -26,7 +26,7 @@ videos ever played at 1×?*
 
 1. **Store accounts are ready to publish.** Nazar's move, before Phase 4. On the Chrome Web Store: the fee is paid, the contact email is verified, 2-Step Verification is on, and trader status is set to "non-trader". The addons.mozilla.org account needs nothing more for manual uploads.
 2. **Trademark search for "Doublespeed".** Before Phase 4's submission; an agent can do the search, Nazar makes the call.
-3. **Connect `GWSoT/doublespeed` to Codex code review** in Codex's settings. Nazar's move; `/ship` needs it.
+3. ~~**Connect `GWSoT/doublespeed` to Codex code review** in Codex's settings.~~ Done: Codex reviewed [#9](https://github.com/GWSoT/doublespeed/pull/9).
 
 ---
 
@@ -45,7 +45,7 @@ the core rules, the site list and a minimal popup, tested end to end.
 **Slices:**
 
 1. **Video finder and default speed.** Every `<video>` is found, whether in the light DOM, open or closed shadow roots, iframes, or added later. It gets the default speed on each new source, and live videos are skipped. Comes with the Playwright harness and fixture pages. — [#1](https://github.com/GWSoT/doublespeed/issues/1), done in [#8](https://github.com/GWSoT/doublespeed/pull/8)
-2. **The speed rules.** User override vs. site reset, the fight back-off, and a YouTube-style fixture that resets to 1× per video. — [#2](https://github.com/GWSoT/doublespeed/issues/2)
+2. **The speed rules.** User override vs. site reset, the fight back-off, and a YouTube-style fixture that resets to 1× per video. — [#2](https://github.com/GWSoT/doublespeed/issues/2), done in [#9](https://github.com/GWSoT/doublespeed/pull/9)
 3. **Settings and the site list.** The `storage.sync` schema, install seeding (2×, `music.youtube.com`), the page site for iframes, and settings changes applied live. — [#3](https://github.com/GWSoT/doublespeed/issues/3)
 4. **Popup, first version.** The on/off switch for the page site and the default speed control. — [#4](https://github.com/GWSoT/doublespeed/issues/4)
 
