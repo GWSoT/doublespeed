@@ -1,17 +1,24 @@
 /**
  * Applies the speed rules (SPEC §3.2) to each video the finder reports. The decisions live in
- * `src/lib/video-state.ts`; this file only reads videos and carries the decisions out.
+ * `src/lib/speed-rules.ts`; this file only reads videos and carries the decisions out.
  */
-import { decide, type VideoSnapshot, type VideoState } from '../lib/video-state';
+import { onMedia, onRateChange, type Step, type VideoSnapshot, type VideoState } from '../lib/speed-rules';
 
-/** Media events after which the decision for a video can change. */
-const REEVALUATE_ON = ['loadstart', 'loadedmetadata', 'durationchange', 'play'] as const;
+/** Media events after which rule 1's answer for a video can change. */
+const MEDIA_EVENTS = ['loadstart', 'loadedmetadata', 'durationchange', 'play'] as const;
 
 export interface SpeedEngine {
   track(video: HTMLVideoElement): void;
 }
 
-export function createSpeedEngine(options: { defaultSpeed: () => number; signal: AbortSignal }): SpeedEngine {
+export interface SpeedEngineOptions {
+  defaultSpeed: () => number;
+  /** The latest trusted input in this frame, on the `performance.now()` clock. */
+  lastInputAt: () => number | null;
+  signal: AbortSignal;
+}
+
+export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
   const states = new WeakMap<HTMLVideoElement, VideoState>();
   /** Bumped on every `loadstart`, so reloading the same URL still counts as a new source. */
   const loads = new WeakMap<HTMLVideoElement, number>();
@@ -30,31 +37,46 @@ export function createSpeedEngine(options: { defaultSpeed: () => number; signal:
     return src ? `${loads.get(video) ?? 0}|${src}` : '';
   }
 
-  function evaluate(video: HTMLVideoElement): void {
-    const snapshot: VideoSnapshot = {
+  function snapshot(video: HTMLVideoElement): VideoSnapshot {
+    return {
       source: sourceKey(video),
       readyState: video.readyState,
       duration: video.duration,
       playbackRate: video.playbackRate,
     };
-    const { state, action } = decide(states.get(video), snapshot, options.defaultSpeed());
-    states.set(video, state);
-    if (action.kind === 'set-rate') setRate(video, action.rate);
+  }
+
+  function carryOut(video: HTMLVideoElement, step: Step): void {
+    states.set(video, step.state);
+    if (step.action.kind === 'set-rate') setRate(video, step.action.rate);
+  }
+
+  function onMediaEvent(video: HTMLVideoElement): void {
+    carryOut(video, onMedia(states.get(video), snapshot(video), performance.now(), options.defaultSpeed()));
+  }
+
+  function onRateChangeEvent(video: HTMLVideoElement): void {
+    const state = states.get(video);
+    if (!state) return;
+    const now = performance.now();
+    carryOut(video, onRateChange(state, snapshot(video), now, options.lastInputAt(), options.defaultSpeed()));
   }
 
   return {
     track(video) {
-      for (const type of REEVALUATE_ON) {
+      const listen = { signal: options.signal };
+      for (const type of MEDIA_EVENTS) {
         video.addEventListener(
           type,
           () => {
             if (type === 'loadstart') loads.set(video, (loads.get(video) ?? 0) + 1);
-            evaluate(video);
+            onMediaEvent(video);
           },
-          { signal: options.signal },
+          listen,
         );
       }
-      evaluate(video);
+      video.addEventListener('ratechange', () => onRateChangeEvent(video), listen);
+      onMediaEvent(video);
     },
   };
 }

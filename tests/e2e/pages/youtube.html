@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>youtube-style</title>
+<video id="v" muted preload="auto"></video>
+<button id="next">Next video</button>
+<script>
+  // Like YouTube: one <video> reused for every item, ads included, and the player puts its
+  // own speed (1×) back shortly after each new source loads.
+  const video = document.getElementById('v');
+  window.loaded = 0; // sources loaded so far
+  window.resets = 0; // times the player has reset the speed
+  video.addEventListener('loadedmetadata', () => {
+    setTimeout(() => {
+      video.playbackRate = 1;
+      window.resets++;
+    }, 100);
+  });
+  function load(path) {
+    video.src = `${path}?item=${++window.loaded}`;
+  }
+  window.player = {
+    next: () => load('/media/clip-video.webm'),
+    playAd: () => load('/media/clip.webm'),
+  };
+  document.getElementById('next').addEventListener('click', () => window.player.next());
+  load('/media/clip.webm');
+</script>

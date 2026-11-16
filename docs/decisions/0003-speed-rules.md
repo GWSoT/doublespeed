@@ -25,7 +25,7 @@ The rules in SPEC §3.2. In short:
 - No rules for "decorative" videos.
 - Live videos (`duration === Infinity`) are left alone, even when rewound.
 - The default speed applies on every new source.
-- A change within ~1 s of a trusted click or keypress becomes that video's override.
+- A change within ~1 s of a trusted click or keypress becomes that video's override, but only if the input came after the default was applied to the current source.
 - Any other change is a site reset and is undone, with a back-off so we never loop.
 - The default speed is one global setting: 2× on install, 0.25×–4× in 0.25 steps.
 - Settings changes apply to open tabs immediately.
@@ -34,8 +34,9 @@ The rules in SPEC §3.2. In short:
 
 **Enables** — a predictable rule users can learn: "new video, 2×; I changed it, it stays".
 
-**Costs** — the input-window heuristic can misread a site reset that happens right after an
-unrelated click (e.g. clicking "next video"). This is the top risk in ROADMAP.md.
+**Costs** — the input window is a heuristic. A site reset that follows an unrelated click on the
+same source within a second is read as the user's choice. The worst case, clicking "next video",
+is handled: input before the current source was sped up never counts (ROADMAP risk 1).
 
 **Binds** — per-video state is in memory only; overrides never sync or survive a reload.
 
