@@ -150,13 +150,16 @@ Overrides never sync and never survive a reload.
   state machine), unit tested with Vitest. `src/content/` holds the content script's DOM
   side: the video finder and the speed engine that carries out the rules.
 - The video finder observes the document and every reachable shadow root. It looks up closed
-  roots only on custom elements, to keep the cost per element low. A custom element that
-  gets its shadow root after insertion is checked again at `DOMContentLoaded` and `load`.
-  After that, a click inside it reveals it. A player defined after load that autoplays
-  without a click is the known gap.
+  roots only on custom elements, to keep the cost per element low. A custom element inserted
+  before its definition gets its shadow root on upgrade, which no DOM mutation reports, so
+  it's checked again after every mutation batch until it's defined: pages go on changing the
+  DOM around a definition. A defined custom element without a shadow root is checked again
+  at `DOMContentLoaded` and `load`, and a click inside any custom element checks it. The
+  known gap is a player defined after load that autoplays with no DOM change after its
+  definition and no click.
 - `tests/e2e/` holds Playwright tests that load the built extension into Chromium and drive
   local fixture pages: a YouTube-style player that resets to 1× per video, iframes, open and
-  closed shadow DOM, a live stream, and videos added after load.
+  closed shadow DOM, players defined late, a live stream, and videos added after load.
 
 Stack: WXT + TypeScript, Svelte 5 for the popup and options page, Vitest, Playwright,
 `web-ext lint` for Firefox ([ADR-0001](docs/decisions/0001-stack.md)).

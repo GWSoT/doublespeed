@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>defined late</title>
+<script>
+  function definePlayer(name) {
+    customElements.define(
+      name,
+      class extends HTMLElement {
+        constructor() {
+          super();
+          const video = document.createElement('video');
+          video.src = '/media/clip.webm';
+          video.preload = 'auto';
+          video.muted = true;
+          this.attachShadow({ mode: 'open' }).append(video);
+        }
+      },
+    );
+  }
+
+  // The page goes on changing its DOM after a definition, as Reddit's does within milliseconds.
+  function pageActivity() {
+    document.body.append(document.createElement('div'));
+  }
+</script>
+
+<!--
+  Like Reddit's player: in the page from the start, defined by a script that arrives after
+  DOMContentLoaded while the page is still loading. The test can hold the image back, so
+  `load` waits for it.
+-->
+<early-player id="early"></early-player>
+<img src="/held.png" alt="" />
+<!-- Defined after load: no click, only the page's next DOM change. -->
+<after-player id="after"></after-player>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      definePlayer('early-player');
+      pageActivity();
+      window.earlyDefined = true;
+    }, 100);
+  });
+
+  addEventListener('load', () => {
+    setTimeout(() => {
+      definePlayer('after-player');
+      pageActivity();
+      window.afterDefined = true;
+    }, 300);
+  });
+</script>
