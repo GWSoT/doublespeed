@@ -18,6 +18,17 @@
     );
   }
 
+  // A wrapper with a shadow root, holding a player that isn't defined yet.
+  customElements.define(
+    'player-box',
+    class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).append(Object.assign(document.createElement('inner-player'), { id: 'inner' }));
+      }
+    },
+  );
+
   // The page goes on changing its DOM after a definition, as Reddit's does within milliseconds.
   function pageActivity() {
     document.body.append(document.createElement('div'));
@@ -33,6 +44,8 @@
 <img src="/held.png" alt="" />
 <!-- Defined after load: no click, only the page's next DOM change. -->
 <after-player id="after"></after-player>
+<!-- The test takes it out and puts it back before defining the player inside. -->
+<player-box id="box"></player-box>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {

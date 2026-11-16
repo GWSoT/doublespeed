@@ -29,8 +29,12 @@ export function watchForVideos(doc: Document, onVideo: OnVideo, signal: AbortSig
   const seenVideos = new WeakSet<HTMLVideoElement>();
   /** Set while scanning a batch when a video or shadow root already seen turns up again. */
   let sawKnown = false;
-  /** Custom elements not defined yet, re-checked after every mutation batch while they wait. */
-  const undefinedHosts = new Set<Element>();
+  /**
+   * Custom elements not defined yet, re-checked after every mutation batch while they wait.
+   * One taken out of the page stays here, since a player put back whole isn't rescanned; the
+   * set holds it weakly, so the page can still drop it for good.
+   */
+  const undefinedHosts = new IterableWeakSet<Element>();
   /** Defined custom elements seen without a shadow root, re-checked until the page has loaded. */
   let rootless: Set<Element> | null = new Set();
 
@@ -95,10 +99,6 @@ export function watchForVideos(doc: Document, onVideo: OnVideo, signal: AbortSig
       if (el.matches(':defined')) {
         undefinedHosts.delete(el);
         checkHost(el);
-      } else if (!el.isConnected) {
-        // Out of the page nothing upgrades it. Putting it back rescans it, unless it's inside a
-        // player put back whole; a click inside still finds that one.
-        undefinedHosts.delete(el);
       }
     }
   }
@@ -183,4 +183,33 @@ function shadowRootOf(el: Element): ShadowRoot | null {
     // Not a valid shadow host.
   }
   return null;
+}
+
+/** A set that can be iterated but doesn't keep its members alive. */
+class IterableWeakSet<T extends object> {
+  readonly #refs = new Set<WeakRef<T>>();
+  readonly #refOf = new WeakMap<T, WeakRef<T>>();
+
+  add(value: T): void {
+    if (this.#refOf.has(value)) return;
+    const ref = new WeakRef(value);
+    this.#refOf.set(value, ref);
+    this.#refs.add(ref);
+  }
+
+  delete(value: T): void {
+    const ref = this.#refOf.get(value);
+    if (!ref) return;
+    this.#refOf.delete(value);
+    this.#refs.delete(ref);
+  }
+
+  /** The members still alive. Ones collected since are forgotten along the way. */
+  *[Symbol.iterator](): Generator<T> {
+    for (const ref of this.#refs) {
+      const value = ref.deref();
+      if (value) yield value;
+      else this.#refs.delete(ref);
+    }
+  }
 }

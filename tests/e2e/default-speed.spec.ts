@@ -117,6 +117,25 @@ test.describe('players defined late, like Reddit’s', () => {
     await page.waitForFunction(flag, 'afterDefined');
     await expectRate(page, playerVideo, DEFAULT, 'after');
   });
+
+  test('a player inside a shadow root taken out and put back is still found once defined', async ({ page }) => {
+    await page.goto('/defined-late.html');
+    await page.evaluate(async () => {
+      const nextTask = () => new Promise((resolve) => setTimeout(resolve, 50));
+      const box = document.getElementById('box')!;
+      box.remove();
+      await nextTask(); // A mutation batch runs while the player is out of the page.
+      document.body.append(box);
+      await nextTask();
+      const page = window as unknown as { definePlayer(name: string): void; pageActivity(): void };
+      page.definePlayer('inner-player');
+      page.pageActivity();
+    });
+    const innerVideo = () =>
+      document.getElementById('box')!.shadowRoot!.getElementById('inner')!.shadowRoot!.querySelector('video')!
+        .playbackRate;
+    await expectRate(page, innerVideo, DEFAULT);
+  });
 });
 
 test('live streams are left alone, even one that turns live after being sped up', async ({ page }) => {
