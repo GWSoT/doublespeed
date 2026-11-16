@@ -16,6 +16,13 @@ export default defineConfig({
     // everywhere; the host permission also lets the popup read the active tab's URL.
     permissions: ['storage'],
     host_permissions: ['<all_urls>'],
+    // The shortcuts (ADR-0005). Users rebind them by these names, so the names never change.
+    // Neither browser allows `/` in a shortcut, which is why the toggle is Alt+R.
+    commands: {
+      'speed-up': { suggested_key: { default: 'Alt+Period' }, description: '__MSG_commandSpeedUp__' },
+      'slow-down': { suggested_key: { default: 'Alt+Comma' }, description: '__MSG_commandSlowDown__' },
+      'toggle-speed': { suggested_key: { default: 'Alt+R' }, description: '__MSG_commandToggleSpeed__' },
+    },
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {

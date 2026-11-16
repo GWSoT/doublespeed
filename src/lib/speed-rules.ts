@@ -4,6 +4,7 @@
  * feeds it in on media events (`onMedia`) and on `ratechange` (`onRateChange`), and carries
  * out the returned `VideoAction`.
  */
+import { commandedSpeed, type SpeedCommand } from './speed-commands';
 
 /** `HTMLMediaElement.HAVE_METADATA`: duration and dimensions are known. */
 export const HAVE_METADATA = 1;
@@ -134,6 +135,25 @@ export function onDefaultChange(prev: VideoState, snap: VideoSnapshot, from: num
 export function onDisable(prev: VideoState, snap: VideoSnapshot): VideoAction {
   if (prev.status !== 'applied' || prev.source !== snap.source || prev.rateBefore === null) return NONE;
   return snap.playbackRate === prev.rateBefore ? NONE : { kind: 'set-rate', rate: prev.rateBefore };
+}
+
+/**
+ * Rule 5, our controls (a shortcut or the popup's −/+): the commanded speed becomes the video's
+ * override, as a choice made in the site's own menu would. A source the site had worn us down
+ * on is taken back, since the user asked for a speed. `null` when the rules don't cover the
+ * video: no source or metadata yet, or a live video.
+ */
+export function onControl(
+  prev: VideoState | undefined,
+  snap: VideoSnapshot,
+  command: SpeedCommand,
+  defaultSpeed: number,
+): (Step & { speed: number }) | null {
+  if (!prev || prev.source !== snap.source || (prev.status !== 'applied' && prev.status !== 'yielded')) return null;
+  const speed = commandedSpeed(command, snap.playbackRate, defaultSpeed);
+  const state: VideoState = { ...prev, status: 'applied', override: speed, resets: [] };
+  const step = snap.playbackRate === speed ? { state, action: NONE } : setRate(state, speed);
+  return { ...step, speed };
 }
 
 /**

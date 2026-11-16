@@ -2,7 +2,9 @@
  * Applies the speed rules (SPEC §3.2) to each video the finder reports. The decisions live in
  * `src/lib/speed-rules.ts`; this file only reads videos and carries the decisions out.
  */
+import type { SpeedCommand } from '../lib/speed-commands';
 import {
+  onControl,
   onDefaultChange,
   onDisable,
   onMedia,
@@ -27,6 +29,16 @@ export interface SpeedEngine {
   track(video: HTMLVideoElement): void;
   /** Rule 6: applies a settings change to every tracked video, without a reload. */
   applySettings(settings: EngineSettings): void;
+  /**
+   * Rule 5: a shortcut or the popup's −/+, applied to every video the rules cover. Returns
+   * those videos with their new speed, for the speed label. Nothing on a disabled page site.
+   */
+  control(command: SpeedCommand): ControlledVideo[];
+}
+
+export interface ControlledVideo {
+  video: HTMLVideoElement;
+  speed: number;
 }
 
 export interface SpeedEngineOptions extends EngineSettings {
@@ -130,6 +142,18 @@ export function createSpeedEngine(options: SpeedEngineOptions): SpeedEngine {
           if (state) carryOut(video, onDefaultChange(state, snapshot(video), previousDefault, defaultSpeed));
         });
       }
+    },
+
+    control(command) {
+      const controlled: ControlledVideo[] = [];
+      if (!enabled) return controlled;
+      forEachTracked((video) => {
+        const step = onControl(states.get(video), snapshot(video), command, defaultSpeed);
+        if (!step) return;
+        carryOut(video, step);
+        controlled.push({ video, speed: step.speed });
+      });
+      return controlled;
     },
   };
 }

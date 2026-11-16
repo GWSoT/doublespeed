@@ -1,5 +1,6 @@
 import { hostOfUrl, isGetPageSite } from '../src/lib/page-site';
 import { installSeed, SETTINGS_KEY } from '../src/lib/settings';
+import { isSpeedCommand, speedCommandMessage } from '../src/lib/speed-commands';
 
 // The service worker on Chrome, an event page on Firefox (SPEC §5). Listeners are registered
 // synchronously, so the browser can wake it for each event.
@@ -18,5 +19,17 @@ export default defineBackground(() => {
     if (!isGetPageSite(message)) return;
     // `sendResponse` rather than a returned promise: Chrome 120 doesn't take promises here.
     sendResponse(hostOfUrl(sender.tab?.url));
+  });
+
+  // The shortcuts (ADR-0005). With no `frameId`, the message reaches every frame in the tab.
+  browser.commands.onCommand.addListener(async (command, tab) => {
+    if (!isSpeedCommand(command)) return;
+    const tabId = tab?.id ?? (await browser.tabs.query({ active: true, currentWindow: true }))[0]?.id;
+    if (tabId === undefined) return;
+    try {
+      await browser.tabs.sendMessage(tabId, speedCommandMessage(command));
+    } catch {
+      // No content script in the tab: a browser page, a store, or a tab loaded before install.
+    }
   });
 });
