@@ -45,7 +45,7 @@ describe('onMedia (rule 1: new source)', () => {
     const [before, after] = media(snap({ readyState: 0, duration: NaN }), snap());
     expect(before!.action).toEqual({ kind: 'none' });
     expect(after!.action).toEqual({ kind: 'set-rate', rate: DEFAULT });
-    expect(after!.state).toMatchObject({ status: 'applied', rateBefore: 1, appliedAt: 10, expected: DEFAULT });
+    expect(after!.state).toMatchObject({ status: 'applied', rateBefore: 1, appliedAt: 10, expected: [DEFAULT] });
   });
 
   it('remembers the speed the source had before we changed it', () => {
@@ -75,7 +75,7 @@ describe('onMedia (rule 1: new source)', () => {
   it('does nothing when the video is already at the default speed', () => {
     const [step] = media(snap({ playbackRate: DEFAULT }));
     expect(step!.action).toEqual({ kind: 'none' });
-    expect(step!.state).toMatchObject({ status: 'applied', expected: null });
+    expect(step!.state).toMatchObject({ status: 'applied', expected: [] });
   });
 
   it('leaves a live video alone, whatever its speed does', () => {
@@ -97,7 +97,7 @@ describe('onRateChange', () => {
     const applied = onMedia(undefined, snap(), 0, DEFAULT).state;
     const step = onRateChange(applied, snap({ playbackRate: DEFAULT }), 5, null, DEFAULT);
     expect(step.action).toEqual({ kind: 'none' });
-    expect(step.state).toMatchObject({ expected: null, override: null, resets: [] });
+    expect(step.state).toMatchObject({ expected: [], override: null, resets: [] });
   });
 
   it('rule 3: a change right after the user’s input becomes the override', () => {
@@ -122,7 +122,7 @@ describe('onRateChange', () => {
   it('rule 4: undoes a site reset with no user input', () => {
     const step = onRateChange(appliedAt2(), snap({ playbackRate: 1 }), 100, null, DEFAULT);
     expect(step.action).toEqual({ kind: 'set-rate', rate: DEFAULT });
-    expect(step.state).toMatchObject({ expected: DEFAULT, resets: [100] });
+    expect(step.state).toMatchObject({ expected: [DEFAULT], resets: [100] });
   });
 
   it('rule 4: puts back the user’s override, not the default, after a site reset', () => {
@@ -133,7 +133,7 @@ describe('onRateChange', () => {
 
   it('rule 4: accepts a site change that lands on the target speed', () => {
     const applied = onMedia(undefined, snap(), 0, DEFAULT).state;
-    const step = onRateChange({ ...applied, expected: null }, snap({ playbackRate: DEFAULT }), 50, null, DEFAULT);
+    const step = onRateChange({ ...applied, expected: [] }, snap({ playbackRate: DEFAULT }), 50, null, DEFAULT);
     expect(step.action).toEqual({ kind: 'none' });
     expect(step.state.resets).toEqual([]);
   });
@@ -174,7 +174,24 @@ describe('rule 6: settings changed live', () => {
   it('a new default moves a video with no override', () => {
     const step = onDefaultChange(appliedAt2(), snap({ playbackRate: DEFAULT }), DEFAULT, 3);
     expect(step.action).toEqual({ kind: 'set-rate', rate: 3 });
-    expect(step.state.expected).toBe(3);
+    expect(step.state.expected).toEqual([3]);
+  });
+
+  it('two quick default changes: both echoes are ours, even right after the user’s input', () => {
+    // 2 → 2.25 → 2.5 before either ratechange arrives. Both events read 2.5.
+    const first = onDefaultChange(appliedAt2(), snap({ playbackRate: DEFAULT }), DEFAULT, 2.25);
+    const second = onDefaultChange(first.state, snap({ playbackRate: 2.25 }), 2.25, 2.5);
+    expect(second.action).toEqual({ kind: 'set-rate', rate: 2.5 });
+    expect(second.state.expected).toEqual([2.25, 2.5]);
+
+    // The user clicked in the page 100 ms ago, so an outside change would count as theirs.
+    const echo1 = onRateChange(second.state, snap({ playbackRate: 2.5 }), 1000, 900, 2.5);
+    const echo2 = onRateChange(echo1.state, snap({ playbackRate: 2.5 }), 1001, 900, 2.5);
+    expect(echo2.state).toMatchObject({ expected: [], override: null });
+    expect([echo1.action, echo2.action]).toEqual([{ kind: 'none' }, { kind: 'none' }]);
+
+    // So the next default still moves it.
+    expect(onDefaultChange(echo2.state, snap({ playbackRate: 2.5 }), 2.5, 3).action).toEqual({ kind: 'set-rate', rate: 3 });
   });
 
   it('a new default moves a video whose echo of our last change hasn’t arrived yet', () => {

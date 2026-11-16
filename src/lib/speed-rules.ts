@@ -43,8 +43,12 @@ export interface VideoState {
   appliedAt: number | null;
   /** The user's in-the-moment speed for this source (SPEC §3.1 "override"). */
   override: number | null;
-  /** The speed we just set, until its `ratechange` arrives (rule 2). */
-  expected: number | null;
+  /**
+   * The speeds we set whose `ratechange` hasn't arrived yet, oldest first (rule 2). Each write
+   * queues its own event, and every event reads the current speed, so two quick writes give
+   * two events that both read the last one.
+   */
+  expected: readonly number[];
   /** When we undid recent site resets, for the back-off. */
   resets: readonly number[];
 }
@@ -69,11 +73,11 @@ export function targetSpeed(state: VideoState, defaultSpeed: number): number {
 }
 
 function fresh(source: string, status: VideoStatus): VideoState {
-  return { source, status, rateBefore: null, appliedAt: null, override: null, expected: null, resets: [] };
+  return { source, status, rateBefore: null, appliedAt: null, override: null, expected: [], resets: [] };
 }
 
 function setRate(state: VideoState, rate: number): Step {
-  return { state: { ...state, expected: rate }, action: { kind: 'set-rate', rate } };
+  return { state: { ...state, expected: [...state.expected, rate] }, action: { kind: 'set-rate', rate } };
 }
 
 /**
@@ -118,7 +122,7 @@ export function onDefaultChange(prev: VideoState, snap: VideoSnapshot, from: num
     return { state: prev, action: NONE };
   }
   const rate = snap.playbackRate;
-  if (rate === to || (rate !== from && rate !== prev.expected)) return { state: prev, action: NONE };
+  if (rate === to || (rate !== from && rate !== prev.expected.at(-1))) return { state: prev, action: NONE };
   return setRate(prev, to);
 }
 
@@ -146,9 +150,13 @@ export function onRateChange(
   if (prev.status !== 'applied' || prev.source !== snap.source) return { state: prev, action: NONE };
   const rate = snap.playbackRate;
 
-  // Rule 2: the echo of our own change.
-  if (prev.expected !== null && rate === prev.expected) return { state: { ...prev, expected: null }, action: NONE };
-  const state: VideoState = { ...prev, expected: null };
+  // Rule 2: the echo of one of our own changes. The video is still at the last speed we set,
+  // so this event is one of ours; it accounts for the oldest write still waiting.
+  if (prev.expected.length > 0 && rate === prev.expected.at(-1)) {
+    return { state: { ...prev, expected: prev.expected.slice(1) }, action: NONE };
+  }
+  // Someone else changed the speed after our writes: what's left of them can't be told apart.
+  const state: VideoState = { ...prev, expected: [] };
 
   // Rule 3: the user's change. The input must come after the rules took over this source:
   // a click on "next video" lands before the new source loads, so the site's reset that
