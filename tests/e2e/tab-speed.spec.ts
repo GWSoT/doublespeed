@@ -41,6 +41,22 @@ test.describe('the badge', () => {
     await expect.poll(() => badge(context, page)).toBe('2×');
   });
 
+  test('follows a player whose shadow root holds the only video, removed and put back', async ({ context, page }) => {
+    await page.goto('/empty.html');
+    await page.evaluate(() => {
+      const host = document.createElement('x-player');
+      host.attachShadow({ mode: 'open' }).innerHTML = '<video src="/media/clip.webm" preload="auto" muted></video>';
+      document.body.append(host);
+      (window as unknown as { player: Element }).player = host;
+    });
+    await expect.poll(() => badge(context, page)).toBe('2×');
+
+    await page.evaluate(() => (window as unknown as { player: Element }).player.remove());
+    await expect.poll(() => badge(context, page)).toBe('');
+    await page.evaluate(() => document.body.append((window as unknown as { player: Element }).player));
+    await expect.poll(() => badge(context, page)).toBe('2×');
+  });
+
   test('clears when the player empties its only video', async ({ context, page }) => {
     await page.goto('/plain.html');
     await expect.poll(() => badge(context, page)).toBe('2×');
