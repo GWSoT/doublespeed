@@ -63,6 +63,18 @@ export class ExtensionStorage {
   }
 }
 
+/**
+ * The popup for `page`'s tab. It opens in a tab of its own, behind `page`, so `page` stays the
+ * active tab the popup acts on, as when the toolbar button is clicked.
+ */
+export async function openPopup(context: BrowserContext, page: Page): Promise<Page> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  const popup = await context.newPage();
+  await page.bringToFront();
+  await popup.goto(new URL('/popup.html', worker.url()).href);
+  return popup;
+}
+
 /** The frame whose URL matches, waiting for it to exist. */
 export async function frameByUrl(page: Page, matches: (url: string) => boolean): Promise<Frame> {
   await expect.poll(() => page.frames().some((f) => matches(f.url()))).toBe(true);

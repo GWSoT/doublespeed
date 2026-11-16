@@ -46,17 +46,19 @@ the core rules, the site list and a minimal popup, tested end to end.
 
 1. **Video finder and default speed.** Every `<video>` is found, whether in the light DOM, open or closed shadow roots, iframes, or added later. It gets the default speed on each new source, and live videos are skipped. Comes with the Playwright harness and fixture pages. — [#1](https://github.com/GWSoT/doublespeed/issues/1), done in [#8](https://github.com/GWSoT/doublespeed/pull/8)
 2. **The speed rules.** User override vs. site reset, the fight back-off, and a YouTube-style fixture that resets to 1× per video. — [#2](https://github.com/GWSoT/doublespeed/issues/2), done in [#9](https://github.com/GWSoT/doublespeed/pull/9)
-3. **Settings and the site list.** The `storage.sync` schema, install seeding (2×, `music.youtube.com`), the page site for iframes, and settings changes applied live. — [#3](https://github.com/GWSoT/doublespeed/issues/3)
+3. **Settings and the site list.** The `storage.sync` schema, install seeding (2×, `music.youtube.com`), the page site for iframes, and settings changes applied live. — [#3](https://github.com/GWSoT/doublespeed/issues/3), done in [#10](https://github.com/GWSoT/doublespeed/pull/10)
 4. **Popup, first version.** The on/off switch for the page site and the default speed control. — [#4](https://github.com/GWSoT/doublespeed/issues/4)
 
 **Exit test:**
 - **Fixtures:** the Playwright suite passes in CI against every fixture.
 - **Real sites,** loaded unpacked in Chrome:
   - YouTube, Vimeo, X and a blog with a YouTube embed play at 2×.
-  - YouTube's next video, and the video after an ad, are still at 2×.
+  - YouTube's next video, by autoplay and in a playlist, and the video after an ad are still at 2× (risk 1).
   - Choosing 1.5× in YouTube's own menu sticks for that video, and the next video is back at 2×.
   - Turning the site off in the popup returns its videos to 1× without a reload.
   - `music.youtube.com` plays at 1×.
+  - Netflix, a Twitch VOD and a news-site player reach 2× and stay there without a tug of war (risk 2).
+- **Cost:** a long scroll through X and through Reddit, recorded in Chrome's Performance panel, shows no long tasks from the content script (risk 5).
 
 ---
 
@@ -130,4 +132,4 @@ Doublespeed is live on the Chrome Web Store and addons.mozilla.org.
 2. **Sites that fight back.** A player that re-sets the rate on every `ratechange` (some DRM players, ad SDKs) could loop with us. *Find out:* the back-off counter, plus Netflix, Twitch VODs and news-site players on the Phase 1 checklist.
 3. **Videos we can't reach.** Closed shadow roots created before our script runs, sandboxed iframes, `srcdoc` and `about:blank` frames. *Find out:* one fixture per case in slice 1.
 4. **Chrome Web Store's in-depth review of `<all_urls>`.** It can take weeks or reject a vague justification. *Find out early:* upload an unlisted build as soon as Phase 2 is done, to learn the review time before launch matters.
-5. **The cost of running on every page.** A `MutationObserver` on heavy feeds (X, Reddit) could add jank. *Find out:* profile a long scroll on both in Phase 1. Videos are found from mutation batches, never by polling.
+5. **The cost of running on every page.** A `MutationObserver` on heavy feeds (X, Reddit) could add jank. *Find out:* profile a long scroll on both, part of the Phase 1 exit test. Videos are found from mutation batches, never by polling.
