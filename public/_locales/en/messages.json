@@ -120,5 +120,137 @@
   "popupSaveFailed": {
     "message": "Couldn't save the change. Try again.",
     "description": "Shown in the popup when the browser refuses to save a setting."
+  },
+  "popupSiteList": {
+    "message": "Site list",
+    "description": "Link at the bottom of the popup that opens the options page with the list of sites the extension is off on."
+  },
+  "optionsTitle": {
+    "message": "Doublespeed settings",
+    "description": "Browser tab title of the options page."
+  },
+  "optionsSitesTitle": {
+    "message": "Sites where Doublespeed is off",
+    "description": "Heading of the options page's list of disabled sites."
+  },
+  "optionsSitesIntro": {
+    "message": "Videos on these sites play at whatever speed the site chooses.",
+    "description": "Under the heading of the list of disabled sites."
+  },
+  "optionsAddLabel": {
+    "message": "Add site",
+    "description": "Label of the field where the user types or pastes a site to turn off."
+  },
+  "optionsAddPlaceholder": {
+    "message": "A link, or a site such as youtube.com",
+    "description": "Placeholder in the Add site field."
+  },
+  "optionsAddButton": {
+    "message": "Add",
+    "description": "Button that adds the site in the Add site field to the list."
+  },
+  "optionsIncludeSubdomains": {
+    "message": "Include subdomains",
+    "description": "Checkbox under the Add site field. Ticked, the rule also covers every subdomain of the site (music.youtube.com for youtube.com)."
+  },
+  "optionsPreviewExact": {
+    "message": "Turns off $HOST$.",
+    "description": "Under the Add site field: what adding it will turn off.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "youtube.com"
+      }
+    }
+  },
+  "optionsPreviewWildcard": {
+    "message": "Turns off $HOST$ and all its subdomains.",
+    "description": "Under the Add site field, with Include subdomains ticked: what adding it will turn off.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "youtube.com"
+      }
+    }
+  },
+  "optionsInvalid": {
+    "message": "That isn't a website address.",
+    "description": "Under the Add site field when what was typed isn't a site or a web link."
+  },
+  "optionsNoSubdomains": {
+    "message": "$HOST$ is an IP address, so it has no subdomains.",
+    "description": "Under the Add site field when Include subdomains is ticked for an IP address.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "192.168.0.1"
+      }
+    }
+  },
+  "optionsDuplicate": {
+    "message": "$SITE$ is already in the list.",
+    "description": "Under the Add site field when the site is already on the list.",
+    "placeholders": {
+      "site": {
+        "content": "$1",
+        "example": "youtube.com"
+      }
+    }
+  },
+  "optionsCovered": {
+    "message": "Already off: $RULE$ covers it.",
+    "description": "Under the Add site field when a rule for a site and all its subdomains already turns the site off.",
+    "placeholders": {
+      "rule": {
+        "content": "$1",
+        "example": "*.youtube.com"
+      }
+    }
+  },
+  "optionsListFull": {
+    "message": "The list is full. Remove a site to add another.",
+    "description": "Shown when the browser's sync storage has no room for another site (about 500)."
+  },
+  "optionsSaveFailed": {
+    "message": "Couldn't save the change. Try again.",
+    "description": "Shown on the options page when the browser refuses to save a change."
+  },
+  "optionsSubdomains": {
+    "message": "and all its subdomains",
+    "description": "Next to a site in the list whose rule also covers its subdomains."
+  },
+  "optionsRemove": {
+    "message": "Remove",
+    "description": "Button next to each site in the list."
+  },
+  "optionsRemoveSite": {
+    "message": "Remove $SITE$",
+    "description": "Accessible name of the Remove button next to a site.",
+    "placeholders": {
+      "site": {
+        "content": "$1",
+        "example": "*.youtube.com"
+      }
+    }
+  },
+  "optionsEmpty": {
+    "message": "No sites yet. Videos play at your default speed everywhere.",
+    "description": "In place of the list when no site is turned off."
+  },
+  "optionsShortcutsTitle": {
+    "message": "Keyboard shortcuts",
+    "description": "Heading of the options page's list of shortcuts."
+  },
+  "optionsShortcutUnset": {
+    "message": "Not set",
+    "description": "In place of a shortcut's keys when it has none (another extension took them, or the user removed them)."
+  },
+  "optionsShortcutsChange": {
+    "message": "Change shortcuts",
+    "description": "Link that opens the browser's keyboard shortcut settings."
+  },
+  "optionsShortcutsSteps": {
+    "message": "To change them, open about:addons, click the gear button, and choose Manage Extension Shortcuts.",
+    "description": "On Firefox versions that can't open their shortcut settings for an extension: how to get there by hand. Use Firefox's own names for the menu items."
   }
 }

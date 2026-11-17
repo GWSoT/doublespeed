@@ -145,6 +145,14 @@
     if (!stored) return;
     void save({ [SETTINGS_KEY]: { ...stored.settings, defaultSpeed: stepSpeed(stored.settings.defaultSpeed, direction) } });
   }
+
+  /** The options page, in a tab of its own. Firefox leaves the popup open unless it's closed. */
+  function openSiteList() {
+    browser.runtime.openOptionsPage().then(
+      () => window.close(),
+      () => {},
+    );
+  }
 </script>
 
 <main>
@@ -242,38 +250,13 @@
       <p class="error" role="alert">{t('popupSaveFailed')}</p>
     {/if}
   {/if}
+
+  <footer>
+    <button class="link" onclick={openSiteList}>{t('popupSiteList')}</button>
+  </footer>
 </main>
 
 <style>
-  :global(:root) {
-    color-scheme: light dark;
-    --bg: #ffffff;
-    --fg: #1f1d24;
-    --muted: #6b6775;
-    --line: #e7e4ec;
-    --accent: #7c3aed;
-    --track: #cfcbd6;
-    --button: #f3f1f6;
-    --error: #b42318;
-  }
-  @media (prefers-color-scheme: dark) {
-    :global(:root) {
-      --bg: #1f1d24;
-      --fg: #f3f1f6;
-      --muted: #a8a3b3;
-      --line: #36333e;
-      --accent: #a78bfa;
-      --track: #4a4654;
-      --button: #2c2933;
-      --error: #f97066;
-    }
-  }
-  :global(body) {
-    margin: 0;
-    background: var(--bg);
-    color: var(--fg);
-  }
-
   main {
     width: 18rem;
     padding: 0.75rem 1rem;
@@ -440,5 +423,27 @@
     margin: 0 0 0.25rem;
     color: var(--error);
     font-size: 0.8rem;
+  }
+
+  footer {
+    margin-top: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+  }
+  .link {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .link:hover {
+    text-decoration: underline;
+  }
+  .link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 </style>

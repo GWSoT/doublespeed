@@ -75,6 +75,14 @@ export async function openPopup(context: BrowserContext, page: Page): Promise<Pa
   return popup;
 }
 
+/** The options page, in a tab of its own. */
+export async function openOptions(context: BrowserContext): Promise<Page> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  const options = await context.newPage();
+  await options.goto(new URL('/options.html', worker.url()).href);
+  return options;
+}
+
 export type SpeedCommand = 'speed-up' | 'slow-down' | 'toggle-speed';
 
 /**

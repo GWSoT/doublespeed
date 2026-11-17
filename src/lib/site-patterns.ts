@@ -44,7 +44,7 @@ export function parseSiteInput(input: string): ParsedSiteInput {
   }
 
   const host = normalizeHost(hostname);
-  if (!host || host.includes('*')) return { ok: false, reason: 'invalid' };
+  if (!isHostname(host)) return { ok: false, reason: 'invalid' };
   if (wildcard && isIpAddress(host)) return { ok: false, reason: 'invalid' };
 
   return { ok: true, pattern: wildcard ? `${WILDCARD}${host}` : host, wildcard, host };
@@ -58,6 +58,16 @@ export function matchesSite(pattern: SitePattern, host: string): boolean {
     return h === base || h.endsWith(`.${base}`);
   }
   return h === pattern;
+}
+
+/**
+ * Whether `host` is a hostname a site can have: dot-separated labels of letters, digits, `-` and
+ * `_` (an international name arrives from `URL` in its `xn--` form), or a bracketed IPv6
+ * address. `URL` alone doesn't settle it: Chrome's parser takes `https://not a site` and
+ * percent-encodes the spaces into the hostname, where Node's throws.
+ */
+function isHostname(host: string): boolean {
+  return /^[a-z0-9_-]+(\.[a-z0-9_-]+)*$/.test(host) || /^\[[0-9a-f:.]+\]$/.test(host);
 }
 
 function isIpAddress(host: string): boolean {
