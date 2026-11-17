@@ -1,6 +1,8 @@
 # Store listing
 
-What goes into the Chrome Web Store's developer dashboard, field by field. The images are in
+What goes into the Chrome Web Store's developer dashboard, field by field. The item is
+`adocdalonhmgamdohammiefgchljljef`, published by GWOSTIK; 0.1.0 went to review, unlisted, on
+2026-11-17. The images are in
 [`images/`](images/), made by `make store-images`; the store icon is
 [`public/icon/128.png`](../public/icon/128.png), made by `make icons`. addons.mozilla.org reuses
 the same text in Phase 3.
