@@ -32,6 +32,10 @@ Private by design: Doublespeed collects nothing and makes no network requests. Y
 
 **Category:** Tools. **Language:** English.
 
+**Homepage URL:** `https://github.com/GWSoT/doublespeed`. **Support URL:**
+`https://github.com/GWSoT/doublespeed/issues`. Both with the next upload, like the privacy policy
+URL.
+
 **Graphic assets:**
 - **Store icon:** `public/icon/128.png`.
 - **Screenshot:** `images/screenshot-1280x800.png`.
@@ -57,8 +61,9 @@ Doublespeed controls the playback speed of videos on web pages. It plays every v
 **Data usage:** tick none of the data types. Tick all three certifications (no selling or
 transfer, no use unrelated to the single purpose, no use for credit decisions).
 
-**Privacy policy URL:** left empty. The store asks for one only when user data is collected,
-and none is. `PRIVACY.md` lands in Phase 4, when the repo goes public.
+**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. The store
+asks for one only when user data is collected, and none is, but it costs nothing to give. 0.1.0
+went to review without it; add it with the next upload rather than withdrawing that review.
 
 ## Distribution tab
 
