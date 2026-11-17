@@ -75,6 +75,32 @@ export async function openPopup(context: BrowserContext, page: Page): Promise<Pa
   return popup;
 }
 
+export type SiteAccess = 'ON_CLICK' | 'ON_SPECIFIC_SITES' | 'ON_ALL_SITES';
+
+/**
+ * Sets the extension's site access as a user would on `chrome://extensions`, through that
+ * page's own API. `ON_CLICK` withholds `<all_urls>`, and `ON_ALL_SITES` grants it back, which
+ * fires `permissions.onAdded`. The page opens in a tab of its own, so bring the tab under test
+ * to the front afterwards.
+ */
+export async function setSiteAccess(context: BrowserContext, hostAccess: SiteAccess): Promise<void> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  const extensionId = new URL(worker.url()).host;
+  const settings = context.pages().find((p) => p.url().startsWith('chrome://extensions')) ?? (await context.newPage());
+  if (!settings.url().startsWith('chrome://extensions')) await settings.goto('chrome://extensions');
+  await settings.evaluate(
+    ({ extensionId, hostAccess }) => {
+      const developerPrivate = (
+        globalThis as unknown as {
+          chrome: { developerPrivate: { updateExtensionConfiguration(update: object): Promise<void> } };
+        }
+      ).chrome.developerPrivate;
+      return developerPrivate.updateExtensionConfiguration({ extensionId, hostAccess });
+    },
+    { extensionId, hostAccess },
+  );
+}
+
 /** The options page, in a tab of its own. */
 export async function openOptions(context: BrowserContext): Promise<Page> {
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));

@@ -4,7 +4,9 @@
  * `localhost` is the page site; cross-origin frames come from `127.0.0.1`.
  */
 import type { Frame, Page } from '@playwright/test';
-import { expect, frameByUrl, openPopup, test } from './extension';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { expect, frameByUrl, openPopup, setSiteAccess, test } from './extension';
 import { shortcutText } from '../../src/lib/speed-commands';
 
 const DEFAULT = 2;
@@ -76,7 +78,88 @@ test.describe('the site switch', () => {
     await popup.bringToFront();
     await popup.reload();
     await expect(siteSwitch(popup)).toBeDisabled();
-    await expect(popup.getByText("Browsers don't let extensions run on this page.")).toBeVisible();
+    await expect(popup.getByText("Browsers don't let extensions run on their own pages.")).toBeVisible();
+  });
+});
+
+/** Issue #21: what the popup says where the extension can't run (SPEC §2.2). */
+test.describe('where it can’t run', () => {
+  const tabSpeedButtons = (popup: Page) => popup.getByRole('group', { name: 'This tab' }).getByRole('button');
+  const grant = (popup: Page) => popup.getByRole('button', { name: 'Allow on all sites' });
+
+  test('offers to allow withheld site access, and reloads the page once allowed', async ({ context, page }) => {
+    await page.goto('/plain.html');
+    await expect.poll(() => rateOf(page)).toBe(DEFAULT);
+
+    // Chrome's "on click": a page loaded now gets no content script.
+    await setSiteAccess(context, 'ON_CLICK');
+    await page.bringToFront();
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('video')!.readyState >= 1);
+    expect(await rateOf(page)).toBe(1);
+
+    const popup = await openPopup(context, page);
+    await expect(popup.getByText("Doublespeed doesn't have access to this page.")).toBeVisible();
+    await expect(siteSwitch(popup)).toBeDisabled();
+    await expect(tabSpeedButtons(popup)).toHaveCount(2);
+    for (const button of await tabSpeedButtons(popup).all()) await expect(button).toBeDisabled();
+
+    // The click asks the browser, whose prompt Playwright can't answer; the user's "Allow" is
+    // the same grant made from chrome://extensions.
+    const reloaded = page.waitForEvent('load');
+    await grant(popup).click();
+    await setSiteAccess(context, 'ON_ALL_SITES');
+    await reloaded;
+
+    await expect.poll(() => rateOf(page)).toBe(DEFAULT);
+    await expect(siteSwitch(popup)).toBeChecked();
+    await expect(popup.getByRole('heading', { name: 'localhost' })).toBeVisible();
+    await expect(grant(popup)).toBeHidden();
+  });
+
+  test('leaves a page alone when access comes back without the button', async ({ context, page }) => {
+    await page.goto('/plain.html');
+    await setSiteAccess(context, 'ON_CLICK');
+    await page.bringToFront();
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('video')!.readyState >= 1);
+    const popup = await openPopup(context, page);
+    await expect(grant(popup)).toBeVisible();
+
+    // Granted from the browser's settings instead: no reload, and the popup follows.
+    await page.evaluate(() => ((window as unknown as { marker: boolean }).marker = true));
+    await setSiteAccess(context, 'ON_ALL_SITES');
+    await expect(siteSwitch(popup)).toBeChecked();
+    expect(await page.evaluate(() => (window as unknown as { marker?: boolean }).marker)).toBe(true);
+  });
+
+  test('names a browser page', async ({ context, page }) => {
+    await page.goto('chrome://version');
+    const popup = await openPopup(context, page);
+    await expect(popup.getByText("Browsers don't let extensions run on their own pages.")).toBeVisible();
+    await expect(siteSwitch(popup)).toBeDisabled();
+    for (const button of await tabSpeedButtons(popup).all()) await expect(button).toBeDisabled();
+  });
+
+  test('names an extension store', async ({ context, page }) => {
+    // Chromium closes a page Playwright points at the Chrome Web Store, so this is the other
+    // store's address, which the popup treats the same way, served without the network.
+    await context.route('https://addons.mozilla.org/**', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Add-ons</title>' }),
+    );
+    await page.goto('https://addons.mozilla.org/en-US/firefox/');
+    const popup = await openPopup(context, page);
+    await expect(popup.getByText("Browsers don't let extensions run on extension stores.")).toBeVisible();
+    await expect(siteSwitch(popup)).toBeDisabled();
+    for (const button of await tabSpeedButtons(popup).all()) await expect(button).toBeDisabled();
+  });
+
+  test('says a local file has no site to turn off', async ({ context, page }) => {
+    // Playwright's Chromium loads the extension with file access on.
+    await page.goto(pathToFileURL(resolve(import.meta.dirname, 'pages/empty.html')).href);
+    const popup = await openPopup(context, page);
+    await expect(popup.getByText("This page isn't on a website, so there's no site to turn off.")).toBeVisible();
+    await expect(siteSwitch(popup)).toBeDisabled();
   });
 });
 

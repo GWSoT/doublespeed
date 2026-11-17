@@ -17,7 +17,7 @@ that build it are in [ROADMAP.md](ROADMAP.md).
 | **Shortcuts** | `Alt+.` faster, `Alt+,` slower (0.25 steps), `Alt+R` toggles: any speed other than 1× → 1×, 1× → default speed. Each press changes every video in the tab, iframes included. Rebindable in the browser's shortcut settings. |
 | **Badge** | On tabs that have a video, the toolbar icon shows the speed of the video playing or last played, in whichever frame (`2×`, `2.25`, `1.5`); before any has played, the first one found. A whole speed keeps its ×; others drop it to fit. On disabled sites it always shows `off`. Tabs with no video show nothing. |
 | **Speed label** | When our controls change the speed, a small `1.75×` label appears over the video for about a second, then fades. Isolated from site styles; works in fullscreen. Never shown permanently. |
-| **Popup** | An on/off switch for the page site, a −/+ control showing this tab's speed, and the default speed setting. Shows a one-time shortcut hint, and a warning with a grant button when the browser has blocked the extension from the site. Links to the options page as "Site list". |
+| **Popup** | An on/off switch for the page site, a −/+ control showing this tab's speed, and the default speed setting. Shows a one-time shortcut hint. Where the extension can't run, the switch's label says why (§2.2): withheld site access, with a grant button; a browser page; an extension store; or a local file with no site. Links to the options page as "Site list". |
 | **Options page** | The list of disabled sites with remove buttons, an **Add site** field, and the shortcuts with a link to the browser's settings for them. Pasting a URL into Add site reduces it to the hostname and says what it will disable; an **Include subdomains** checkbox makes the `*.` form. |
 
 There is no welcome tab on install. All UI text goes through the browser's i18n messages
@@ -37,7 +37,8 @@ The extension has no server and makes no network requests. Everything comes from
 | `commands` | Browser-level shortcuts that never clash with typing or site shortcuts. |
 | `action.setBadgeText` per tab | The badge. |
 | `runtime` messaging, `MessageSender.tab.url` | Content scripts in iframes learn the page site from the background. |
-| `permissions.contains` | Detecting that the user or browser has withheld site access. |
+| `permissions.contains`, `permissions.request`, `permissions.onAdded` | Detecting that the user has withheld site access, asking for it back, and reloading the tab once it's granted. |
+| `extension.isAllowedFileSchemeAccess` | Chrome's "Allow access to file URLs" switch. |
 
 ### 2.2 What they don't give, and what we do instead
 
@@ -48,9 +49,17 @@ The extension has no server and makes no network requests. Everything comes from
   so iframes ask the background, which reads `sender.tab.url`.
 - **Guaranteed site access.** In Firefox, MV3 site access can be revoked at any time in
   `about:addons`. In Chrome, users can set the extension to "on click" or specific sites. The
-  popup checks with `permissions.contains` and offers to grant access.
+  popup checks with `permissions.contains` for the tab's site and offers to grant access to all
+  sites. Content scripts only arrive with a page's next load, so the background reloads the tab
+  once the grant comes through. The popup records which tab in `storage.session` as it asks,
+  because the browser's prompt can close the popup before the answer comes back.
+- **The tab's URL without the `tabs` permission.** The popup only sees it when it has access to
+  the tab. A hidden URL means access is withheld, the page is a browser page, or (in Chrome,
+  with file access off) it's a local file, and nothing tells the last two apart. So the popup
+  checks access first, and with file access off it names both.
 - **Pages extensions can't touch.** Browser pages (`chrome://`, `about:`), the two extension
-  stores, and the PDF viewer never run content scripts. The popup says so.
+  stores, and the PDF viewer never run content scripts. The popup names which kind of page it is.
+  Local files need Chrome's "Allow access to file URLs", and the popup links to that switch.
 - **Audio outside 0.25×–4×.** Firefox mutes it, which is why the speed range stops there.
 - **Unlimited sync storage.** `storage.sync` allows 512 items and 8 KB per item, so the site
   list can hold about 500 entries. The options page reports the quota error rather than failing silently.
@@ -122,6 +131,7 @@ Overrides never sync and never survive a reload.
 | Key | Value | Notes |
 |---|---|---|
 | `tab:<tabId>` | `{ [frameId]: { doc, off, video: { speed, playing, playedAt } \| null } }` | Each frame's report for the badge, and for the popup's speed for this tab. A frame sends one only when it has something to show, and withdraws it on `pagehide`; `doc` is per document, so a late withdrawal from the page a tab just left can't erase the new one. Removed when the tab closes. |
+| `accessGrant` | `{ tabId, at }` | The tab the popup's grant button was pressed in, and when. The next time site access is granted, the background removes it, and reloads that tab if the request is under two minutes old. |
 
 ## 5. Architecture
 
@@ -140,6 +150,7 @@ Overrides never sync and never survive a reload.
         Firefox event page)             ▲
           ├ commands → tab (all frames) │
           ├ badge per tab               │
+          ├ reload after a grant        │
           └ install seeding ────────────┘
         popup (Svelte) ── messages to tab, reads/writes storage.sync
         options (Svelte) ── reads/writes storage.sync
