@@ -16,7 +16,13 @@
     type StorageItems,
     type Stored,
   } from '../../src/lib/settings';
-  import { accessOrigins, siteSwitch, type PageAccess, type UnavailableReason } from '../../src/lib/site-switch';
+  import {
+    accessOrigins,
+    runsOnFiles,
+    siteSwitch,
+    type PageAccess,
+    type UnavailableReason,
+  } from '../../src/lib/site-switch';
   import { canStepSpeed, stepSpeed } from '../../src/lib/speed';
   import { SPEED_COMMANDS, shortcutText, speedCommandMessage, type SpeedCommand } from '../../src/lib/speed-commands';
   import { parseTabFrames, tabKey, tabSpeed, type TabFrames } from '../../src/lib/tab-speed';
@@ -50,6 +56,8 @@
     browserPage: 'popupPageBrowser',
     browserPageOrFile: 'popupPageBrowserOrFile',
     store: 'popupPageStore',
+    // Chrome links to its switch; an extension can't open Firefox's, so the note says where it is.
+    noFileAccess: import.meta.env.FIREFOX ? 'popupNoFileAccessFirefox' : 'popupNoFileAccess',
     noSite: 'popupPageNoSite',
   } as const satisfies Record<UnavailableReason, MessageName>;
 
@@ -81,12 +89,21 @@
     let files = true;
     try {
       siteAccess = await browser.permissions.contains({ origins: accessOrigins(tabUrl) });
-      // Firefox has no file-access switch: with site access it runs on `file:` pages too.
-      files = import.meta.env.FIREFOX || (await browser.extension.isAllowedFileSchemeAccess());
+      const [allowed, firefoxVersion] = await Promise.all([
+        browser.extension.isAllowedFileSchemeAccess(),
+        import.meta.env.FIREFOX ? firefoxBrowserVersion() : undefined,
+      ]);
+      files = runsOnFiles(tabUrl, allowed, firefoxVersion);
     } catch {
       // Treated as withheld: the grant button is the way out.
     }
     access = { site: siteAccess, files };
+  }
+
+  /** Firefox's version; `runtime.getBrowserInfo()` is Firefox-only, so the types lack it. */
+  async function firefoxBrowserVersion(): Promise<string> {
+    const runtime = browser.runtime as typeof browser.runtime & { getBrowserInfo(): Promise<{ version: string }> };
+    return (await runtime.getBrowserInfo()).version;
   }
 
   async function refreshTab() {
@@ -220,7 +237,7 @@
           <p class="note" id="site-note">{t(UNAVAILABLE_NOTES[site.reason])}</p>
           {#if site.reason === 'noAccess'}
             <button class="grant" onclick={grantAccess}>{t('popupGrantAccess')}</button>
-          {:else if site.reason === 'browserPageOrFile'}
+          {:else if site.reason === 'browserPageOrFile' || (site.reason === 'noFileAccess' && !import.meta.env.FIREFOX)}
             <button class="link" onclick={openFileAccess}>{t('popupFileAccess')}</button>
           {/if}
         {:else}

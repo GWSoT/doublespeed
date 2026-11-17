@@ -79,7 +79,15 @@
   },
   "popupFileAccess": {
     "message": "Allow access to file URLs",
-    "description": "Link under popupPageBrowserOrFile. Opens the extension's details page in Chrome, where the switch has this same name."
+    "description": "Link under popupPageBrowserOrFile and popupNoFileAccess. Opens the extension's details page in Chrome, where the switch has this same name."
+  },
+  "popupNoFileAccess": {
+    "message": "Doublespeed doesn't have access to files on your computer.",
+    "description": "Chrome. Shown instead of the site switch on a local file the extension can see but isn't allowed to run on, above the popupFileAccess link."
+  },
+  "popupNoFileAccessFirefox": {
+    "message": "Doublespeed doesn't have access to files on your computer. To allow it, turn on “Access local files on your computer” for Doublespeed in about:addons, then reload the page.",
+    "description": "Firefox 153+. Shown instead of the site switch on a local file while the add-on's local-file permission is off (it's off by default). The quoted name is Firefox's label for that permission in about:addons; extensions can't open that page, so this gives the steps."
   },
   "popupPageStore": {
     "message": "Browsers don't let extensions run on extension stores.",

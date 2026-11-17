@@ -31,6 +31,8 @@ export type UnavailableReason =
   | 'browserPageOrFile'
   /** The Chrome Web Store or addons.mozilla.org. */
   | 'store'
+  /** A local file, which the browser shows but doesn't let the extension run on. */
+  | 'noFileAccess'
   /** A page with no hostname (`file:`), so no rule can match it. */
   | 'noSite';
 
@@ -38,11 +40,28 @@ export type UnavailableReason =
 export interface PageAccess {
   /** `permissions.contains` for `accessOrigins(url)`. */
   site: boolean;
-  /**
-   * Chrome's "Allow access to file URLs" (`extension.isAllowedFileSchemeAccess()`). Firefox has
-   * no such switch, so it's true there.
-   */
+  /** Whether it runs on local files: `runsOnFiles()`. */
   files: boolean;
+}
+
+/** Firefox 153 made local-file access a switch of its own, off by default. */
+const FIREFOX_FILE_SWITCH = 153;
+
+/**
+ * `PageAccess.files` for a tab at `url` (undefined when hidden): whether the extension runs on
+ * local files, as far as that tab goes. It comes from `extension.isAllowedFileSchemeAccess()`
+ * and, on Firefox, the version (`runtime.getBrowserInfo()`). The call reports Chrome's "Allow
+ * access to file URLs" and Firefox 153+'s "Access local files on your computer". Older Firefox
+ * has no switch: it runs on files with site access, yet the call always answers false.
+ *
+ * Chrome hides a file's URL when it can't run there, so a hidden URL may be a file. Firefox
+ * shows file URLs either way, so on Firefox only a `file:` URL is a file.
+ */
+export function runsOnFiles(url: string | undefined, allowed: boolean, firefoxVersion: string | undefined): boolean {
+  if (allowed || firefoxVersion === undefined) return allowed;
+  if (parseUrl(url)?.protocol !== 'file:') return true;
+  const major = Number.parseInt(firefoxVersion, 10);
+  return Number.isFinite(major) && major < FIREFOX_FILE_SWITCH;
 }
 
 /**
@@ -69,6 +88,7 @@ export function siteSwitch(
   if (isStorePage(parsed)) return unavailable('store');
   if (!isWebOrFile(parsed)) return unavailable('browserPage');
   if (!access.site) return unavailable('noAccess');
+  if (parsed.protocol === 'file:' && !access.files) return unavailable('noFileAccess');
 
   const site = normalizeHost(parsed.hostname);
   if (!site) return unavailable('noSite');
