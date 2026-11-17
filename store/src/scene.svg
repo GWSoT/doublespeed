@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <!--
+    The frame of the made-up video in the store screenshot: a sunset over mountains.
+    scene.webm is this frame as a 4 s clip, rendered to a 1280×720 PNG and then encoded with
+    ffmpeg -loop 1 -i scene.png -t 4 -r 24 -vf scale=960:540 -c:v libvpx-vp9 -crf 32 -b:v 0 -pix_fmt yuv420p -an scene.webm
+  -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e1b4b"/>
+      <stop offset=".3" stop-color="#5b21b6"/>
+      <stop offset=".48" stop-color="#db2777"/>
+      <stop offset=".6" stop-color="#fdba74"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".62" cy=".47" r=".3">
+      <stop offset="0" stop-color="#fde68a" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#fde68a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#be185d"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#sky)"/>
+  <rect width="1280" height="720" fill="url(#glow)"/>
+  <g fill="#fff" opacity=".7">
+    <circle cx="140" cy="70" r="1.6"/><circle cx="310" cy="120" r="1.2"/><circle cx="460" cy="48" r="1.4"/>
+    <circle cx="980" cy="90" r="1.6"/><circle cx="1120" cy="40" r="1.2"/><circle cx="1210" cy="150" r="1.4"/>
+    <circle cx="640" cy="80" r="1"/><circle cx="820" cy="30" r="1.2"/><circle cx="60" cy="190" r="1"/>
+  </g>
+  <circle cx="794" cy="340" r="58" fill="#fef3c7"/>
+  <path fill="#4c1d95" d="M0 430 L120 360 L230 410 L360 300 L470 380 L560 330 L700 420 L820 350 L940 400 L1060 310 L1180 380 L1280 340 V720 H0 Z"/>
+  <path fill="#2e1065" d="M0 500 L150 420 L260 470 L400 380 L520 460 L640 410 L760 480 L900 400 L1030 470 L1160 420 L1280 460 V720 H0 Z"/>
+  <rect y="560" width="1280" height="160" fill="url(#lake)"/>
+  <g fill="#fef3c7" opacity=".55">
+    <rect x="744" y="584" width="100" height="4" rx="2"/><rect x="760" y="604" width="68" height="4" rx="2"/>
+    <rect x="774" y="624" width="40" height="3" rx="1.5"/>
+  </g>
+  <path fill="#1e1b4b" d="M0 560 L1280 560 V572 H0 Z" opacity=".5"/>
+</svg>

@@ -24,13 +24,13 @@ videos ever played at 1×?*
 
 **Open items:**
 
-1. **Store accounts are ready to publish.** Nazar's move, before Phase 4. On the Chrome Web Store: the fee is paid, the contact email is verified, 2-Step Verification is on, and trader status is set to "non-trader". The addons.mozilla.org account needs nothing more for manual uploads.
+1. ~~**Store accounts are ready to publish.**~~ Done: on the Chrome Web Store the fee is paid, the contact email is verified, and trader status is "non-trader" (confirmed 2026-11-17). The addons.mozilla.org account needs nothing more for manual uploads.
 2. **Trademark search for "Doublespeed".** Before Phase 4's submission; an agent can do the search, Nazar makes the call.
 3. ~~**Connect `GWSoT/doublespeed` to Codex code review** in Codex's settings.~~ Done: Codex reviewed [#9](https://github.com/GWSoT/doublespeed/pull/9).
 
 ---
 
-## Phase 1 — Every video at 2× — **IN PROGRESS**
+## Phase 1 — Every video at 2× — **COMPLETE**
 
 Load the extension unpacked in Chrome and every video on the web plays at the default speed:
 the core rules, the site list and a minimal popup, tested end to end.
@@ -62,7 +62,7 @@ the core rules, the site list and a minimal popup, tested end to end.
 
 ---
 
-## Phase 2 — Controls and feedback — **IN PROGRESS**
+## Phase 2 — Controls and feedback — **COMPLETE**
 
 Change the speed of any player, including ones without a speed menu, and always see what speed you're on.
 
@@ -108,8 +108,8 @@ Manage the site list properly, run the same build on Firefox, and never fail sil
 Doublespeed is live on the Chrome Web Store and addons.mozilla.org.
 
 **Slices:**
-- **Icon:** the "2×" icon on the existing purple, in every size both stores need.
-- **Listing materials:** `PRIVACY.md`, listing text, screenshots, the justification for all-sites access, and the single-purpose statement.
+- **Icon:** a play button with speed streaks on the existing purple, in every size both stores need. — done early, for risk 4: `assets/icon.svg` and `icon-16.svg`, rendered by `make icons`.
+- **Listing materials:** `PRIVACY.md`, listing text, screenshots, the justification for all-sites access, and the single-purpose statement. — drafted early, for risk 4, in [`store/listing.md`](store/listing.md), with images from `make store-images`; `PRIVACY.md` is still to do.
 - **Trademark:** the search from open item 2.
 - **Release:** the repo made public, version 1.0.0 zips from CI, and the first manual submission to each store, which only Nazar can do.
 
@@ -133,5 +133,5 @@ Doublespeed is live on the Chrome Web Store and addons.mozilla.org.
 1. **The click-then-reset race.** A user clicks "next video", and the site resets the new video to 1× within a second. A plain input window reads that as the user's choice, so the video stays at 1×. *Mitigated in slice 2:* input only counts when it comes after the default was applied to the current source, and the click on "next" always comes before. `youtube.html` reproduces the race: it fails without that condition and passes with it. *Still to check:* YouTube autoplay and playlists on the Phase 1 real-site checklist.
 2. **Sites that fight back.** A player that re-sets the rate on every `ratechange` (some DRM players, ad SDKs) could loop with us. *Find out:* the back-off counter, plus Netflix, Twitch VODs and news-site players on the Phase 1 checklist.
 3. **Videos we can't reach.** Closed shadow roots created before our script runs, sandboxed iframes, `srcdoc` and `about:blank` frames. *Find out:* one fixture per case in slice 1. *Found on the real-site pass:* Reddit defines its players after `DOMContentLoaded`, and they played at 1× until `load` (0.2–4 s). Custom elements still waiting for their definition are now checked again after every mutation batch, and `defined-late.html` covers it.
-4. **Chrome Web Store's in-depth review of `<all_urls>`.** It can take weeks or reject a vague justification. *Find out early:* upload an unlisted build as soon as Phase 2 is done, to learn the review time before launch matters.
+4. **Chrome Web Store's in-depth review of `<all_urls>`.** It can take weeks or reject a vague justification. *Find out early:* upload an unlisted build as soon as Phase 2 is done, to learn the review time before launch matters. *Started* 2026-11-17, once Phase 2 was done: the icon and the listing came forward from Phase 4 for it.
 5. **The cost of running on every page.** A `MutationObserver` on heavy feeds (X, Reddit) could add jank. *Find out:* profile a long scroll on both, part of the Phase 1 exit test. Videos are found from mutation batches, never by polling.

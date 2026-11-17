@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- The 16 px icon, drawn on the pixel grid so the streaks and the triangle's back stay sharp. -->
+  <rect width="16" height="16" rx="3.5" fill="#7c3aed"/>
+  <path d="M8 3 L14.5 8 L8 13 Z" fill="#fff"/>
+  <path d="M3 4h3v1H3zM2 7h4v2H2zM3 11h3v1H3z" fill="#fff"/>
+</svg>
