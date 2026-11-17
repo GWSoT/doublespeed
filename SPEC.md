@@ -17,7 +17,7 @@ that build it are in [ROADMAP.md](ROADMAP.md).
 | **Shortcuts** | `Alt+.` faster, `Alt+,` slower (0.25 steps), `Alt+R` toggles: any speed other than 1× → 1×, 1× → default speed. Each press changes every video in the tab, iframes included. Rebindable in the browser's shortcut settings. |
 | **Badge** | On tabs that have a video, the toolbar icon shows the speed of the video playing or last played, in whichever frame (`2×`, `2.25`, `1.5`); before any has played, the first one found. A whole speed keeps its ×; others drop it to fit. On disabled sites it always shows `off`. Tabs with no video show nothing. |
 | **Speed label** | When our controls change the speed, a small `1.75×` label appears over the video for about a second, then fades. Isolated from site styles; works in fullscreen. Never shown permanently. |
-| **Popup** | An on/off switch for the page site, a −/+ control showing this tab's speed, and the default speed setting. Shows a one-time shortcut hint. Where the extension can't run, the switch's label says why (§2.2): withheld site access, with a grant button; a browser page; an extension store; or a local file with no site. Links to the options page as "Site list". |
+| **Popup** | An on/off switch for the page site, a −/+ control showing this tab's speed, and the default speed setting. Shows a one-time shortcut hint. Where the extension can't run, the switch's label says why (§2.2): withheld site access, with a grant button; a browser page; an extension store; a local file the browser won't let it run on; or a local file with no site. Links to the options page as "Site list". |
 | **Options page** | The list of disabled sites with remove buttons, an **Add site** field, and the shortcuts with a link to the browser's settings for them. Pasting a URL into Add site reduces it to the hostname and says what it will disable; an **Include subdomains** checkbox makes the `*.` form. |
 
 There is no welcome tab on install. All UI text goes through the browser's i18n messages
@@ -38,7 +38,7 @@ The extension has no server and makes no network requests. Everything comes from
 | `action.setBadgeText` per tab | The badge. |
 | `runtime` messaging, `MessageSender.tab.url` | Content scripts in iframes learn the page site from the background. |
 | `permissions.contains`, `permissions.request`, `permissions.onAdded` | Detecting that the user has withheld site access, asking for it back, and reloading the tab once it's granted. |
-| `extension.isAllowedFileSchemeAccess` | Chrome's "Allow access to file URLs" switch. |
+| `extension.isAllowedFileSchemeAccess` | Chrome's "Allow access to file URLs" switch, and Firefox 153+'s "Access local files on your computer". |
 
 ### 2.2 What they don't give, and what we do instead
 
@@ -59,7 +59,13 @@ The extension has no server and makes no network requests. Everything comes from
   checks access first, and with file access off it names both.
 - **Pages extensions can't touch.** Browser pages (`chrome://`, `about:`), the two extension
   stores, and the PDF viewer never run content scripts. The popup names which kind of page it is.
-  Local files need Chrome's "Allow access to file URLs", and the popup links to that switch.
+  Local files need a switch of their own in both browsers, off by default: Chrome's "Allow
+  access to file URLs", and Firefox 153+'s "Access local files on your computer" in
+  `about:addons`. The popup links to Chrome's. An extension can't open `about:addons`, so on
+  Firefox the popup says where the switch is. Firefox before 153 has no switch: it runs on files
+  with site access, yet `isAllowedFileSchemeAccess()` always answers false there, so the popup
+  goes by the Firefox version. Firefox also shows a file's URL with the switch off, so a hidden URL
+  is never a file there.
 - **Audio outside 0.25×–4×.** Firefox mutes it, which is why the speed range stops there.
 - **Unlimited sync storage.** `storage.sync` allows 512 items and 8 KB per item, so the site
   list can hold about 500 entries. The options page reports the quota error rather than failing silently.

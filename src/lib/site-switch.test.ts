@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SiteRule } from './settings';
-import { accessOrigins, siteSwitch as switchFor, type PageAccess } from './site-switch';
+import { accessOrigins, runsOnFiles, siteSwitch as switchFor, type PageAccess } from './site-switch';
 
 const off: SiteRule = { disabled: true, added: '2026-11-16T00:00:00.000Z' };
 const rules = (...patterns: string[]) => new Map(patterns.map((p) => [p, off]));
@@ -118,6 +118,53 @@ describe('siteSwitch', () => {
 
   it('has no site to switch on a file: page', () => {
     expect(siteSwitch('file:///Users/me/movie.mp4', rules())).toEqual({ state: 'unavailable', reason: 'noSite' });
+  });
+
+  it('asks for file access on a file: page it can see but not run on', () => {
+    // Firefox 153+ shows the URL with site access, and runs on it only with local-file access.
+    expect(siteSwitch('file:///Users/me/movie.mp4', rules(), { site: true, files: false })).toEqual({
+      state: 'unavailable',
+      reason: 'noFileAccess',
+    });
+  });
+
+  it('leaves file access alone on the web', () => {
+    expect(siteSwitch('https://youtube.com/', rules(), { site: true, files: false })).toMatchObject({ state: 'on' });
+  });
+});
+
+describe('runsOnFiles', () => {
+  const file = 'file:///Users/me/movie.mp4';
+
+  it('trusts the browser where it reports file access: Chrome, and Firefox 153+', () => {
+    expect(runsOnFiles(file, true, undefined)).toBe(true);
+    expect(runsOnFiles(file, false, undefined)).toBe(false);
+    expect(runsOnFiles(file, true, '153.0')).toBe(true);
+    expect(runsOnFiles(file, false, '153.0')).toBe(false);
+    expect(runsOnFiles(file, false, '160.0.1')).toBe(false);
+  });
+
+  it('runs on files in Firefox before 153, which always reports no access', () => {
+    expect(runsOnFiles(file, false, '128.14.0')).toBe(true);
+    expect(runsOnFiles(file, false, '152.0b3')).toBe(true);
+  });
+
+  it('trusts the report when the Firefox version is unreadable', () => {
+    expect(runsOnFiles(file, false, '')).toBe(false);
+    expect(runsOnFiles(file, false, 'nightly')).toBe(false);
+  });
+
+  it('never takes a hidden URL for a file on Firefox, which shows file URLs either way', () => {
+    // So a hidden URL is a browser page there, as it is in Chrome with file access on.
+    for (const url of [undefined, 'about:robots', 'https://youtube.com/']) {
+      expect(runsOnFiles(url, false, '160.0'), String(url)).toBe(true);
+      expect(siteSwitch(undefined, rules(), { site: true, files: runsOnFiles(url, false, '160.0') })).toEqual({
+        state: 'unavailable',
+        reason: 'browserPage',
+      });
+    }
+    // Chrome hides a file's URL with file access off, so there it may be either.
+    expect(runsOnFiles(undefined, false, undefined)).toBe(false);
   });
 });
 
