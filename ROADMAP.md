@@ -84,17 +84,15 @@ Change the speed of any player, including ones without a speed menu, and always 
 
 ---
 
-## Phase 3 — Options page, Firefox and site access — **NOT STARTED**
+## Phase 3 — Options page, Firefox and site access — **IN PROGRESS**
 
 Manage the site list properly, run the same build on Firefox, and never fail silently when the browser withholds access.
 
-**Slices:**
-- **Options page:** the site list with remove buttons, the Add site field (paste a URL, see what it disables, `*.` for subdomains, quota errors shown), and a link to the browser's shortcut settings.
-- **Missing access:** the popup detects missing site access (`permissions.contains`) and offers a grant button.
-- **Pages extensions can't touch:** the popup explains browser pages and the extension stores.
-- **Firefox:** a manual check on Firefox 128 and the current release.
+**Slices:** ([#6](https://github.com/GWSoT/doublespeed/issues/6))
 
-[#6](https://github.com/GWSoT/doublespeed/issues/6)
+1. **Options page.** The site list with remove buttons. The Add site field reduces a pasted URL to its hostname, has an **Include subdomains** checkbox for the `*.` form, says what it will turn off, and refuses duplicates, sites a `*.` rule already covers, and a full list. Shortcuts with a link to the browser's settings for them. The popup links to the page as "Site list". — [#20](https://github.com/GWSoT/doublespeed/issues/20), done in [#23](https://github.com/GWSoT/doublespeed/pull/23)
+2. **The popup when the extension can't run on the page.** It detects missing site access (`permissions.contains`) and offers a grant button, and it names the kind of page extensions can't touch: a browser page, an extension store, or a local file. — [#21](https://github.com/GWSoT/doublespeed/issues/21)
+3. **Firefox.** Every Phase 1, 2 and 3 check, by hand, on Firefox 128 ESR and the current release. — [#22](https://github.com/GWSoT/doublespeed/issues/22)
 
 **Exit test:**
 - **Firefox:** loaded as a temporary add-on in Firefox, every Phase 1 and Phase 2 exit check passes.

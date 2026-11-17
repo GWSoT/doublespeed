@@ -1,0 +1,29 @@
+/* The colours of the popup and the options page, in light and dark. */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1f1d24;
+  --muted: #6b6775;
+  --line: #e7e4ec;
+  --accent: #7c3aed;
+  --track: #cfcbd6;
+  --button: #f3f1f6;
+  --error: #b42318;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f1d24;
+    --fg: #f3f1f6;
+    --muted: #a8a3b3;
+    --line: #36333e;
+    --accent: #a78bfa;
+    --track: #4a4654;
+    --button: #2c2933;
+    --error: #f97066;
+  }
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}

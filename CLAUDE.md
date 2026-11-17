@@ -6,9 +6,10 @@ Doublespeed is a Chrome and Firefox extension that plays every web video at 2× 
 ## Working here
 
 - **Layout:**
-  - `entrypoints/`: the WXT entrypoints. `background.ts` (install seeding, the page site for iframes), `content.ts` and `popup/` exist today; `options/` arrives in Phase 3.
+  - `entrypoints/`: the WXT entrypoints. `background.ts` (install seeding, the page site for iframes), `content.ts`, `popup/` and `options/` (the site list).
   - `src/lib/`: browser-independent logic, with its `*.test.ts` beside it. `settings.ts` is the `storage.sync` schema.
   - `src/content/`: the DOM side of the content script (video finder, speed engine, speed label, user-input clock, frame settings, frame report). The rules themselves are in `src/lib/speed-rules.ts`.
+  - `src/ui/`: what the popup and the options page share (`theme.css`, the colours in light and dark).
   - `src/background/`: the background's own state: each tab's frame reports and its badge. The picking is in `src/lib/tab-speed.ts`.
   - `tests/e2e/`: Playwright specs, fixture pages in `pages/`, and test clips in `pages/media/` (made with ffmpeg; VP9/Opus WebM, because Playwright's Chromium has no H.264).
   - `public/_locales/en/messages.json`: every UI string.

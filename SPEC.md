@@ -17,8 +17,8 @@ that build it are in [ROADMAP.md](ROADMAP.md).
 | **Shortcuts** | `Alt+.` faster, `Alt+,` slower (0.25 steps), `Alt+R` toggles: any speed other than 1× → 1×, 1× → default speed. Each press changes every video in the tab, iframes included. Rebindable in the browser's shortcut settings. |
 | **Badge** | On tabs that have a video, the toolbar icon shows the speed of the video playing or last played, in whichever frame (`2×`, `2.25`, `1.5`); before any has played, the first one found. A whole speed keeps its ×; others drop it to fit. On disabled sites it always shows `off`. Tabs with no video show nothing. |
 | **Speed label** | When our controls change the speed, a small `1.75×` label appears over the video for about a second, then fades. Isolated from site styles; works in fullscreen. Never shown permanently. |
-| **Popup** | An on/off switch for the page site, a −/+ control showing this tab's speed, and the default speed setting. Shows a one-time shortcut hint, and a warning with a grant button when the browser has blocked the extension from the site. |
-| **Options page** | The list of disabled sites with remove buttons, an **Add site** field, and a link to the browser's shortcut settings. Pasting a URL into Add site reduces it to the hostname and says what it will disable. |
+| **Popup** | An on/off switch for the page site, a −/+ control showing this tab's speed, and the default speed setting. Shows a one-time shortcut hint, and a warning with a grant button when the browser has blocked the extension from the site. Links to the options page as "Site list". |
+| **Options page** | The list of disabled sites with remove buttons, an **Add site** field, and the shortcuts with a link to the browser's settings for them. Pasting a URL into Add site reduces it to the hostname and says what it will disable; an **Include subdomains** checkbox makes the `*.` form. |
 
 There is no welcome tab on install. All UI text goes through the browser's i18n messages
 (`public/_locales/`), English only in v1.

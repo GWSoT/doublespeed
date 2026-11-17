@@ -36,6 +36,21 @@ describe('parseSiteInput', () => {
     expect(parseSiteInput('*.https://example.com')).toEqual({ ok: false, reason: 'invalid' });
     expect(parseSiteInput('*.192.168.0.1')).toEqual({ ok: false, reason: 'invalid' });
   });
+
+  it('rejects a hostname URL would take but no site can have', () => {
+    // Chrome's `URL` takes `https://not a site` as `not%20a%20site`; Node's throws, so these
+    // stand in for it: Node's `URL` accepts all three.
+    expect(parseSiteInput('exa!mple.com')).toEqual({ ok: false, reason: 'invalid' });
+    expect(parseSiteInput('ex$ample.com')).toEqual({ ok: false, reason: 'invalid' });
+    expect(parseSiteInput('a..b.com')).toEqual({ ok: false, reason: 'invalid' });
+  });
+
+  it('accepts international names, underscores and IP addresses', () => {
+    expect(parseSiteInput('https://bücher.example/')).toMatchObject({ ok: true, pattern: 'xn--bcher-kva.example' });
+    expect(parseSiteInput('my_host.example.com')).toMatchObject({ ok: true, pattern: 'my_host.example.com' });
+    expect(parseSiteInput('http://192.168.0.1:8080/')).toMatchObject({ ok: true, pattern: '192.168.0.1' });
+    expect(parseSiteInput('http://[::1]:3000/')).toMatchObject({ ok: true, pattern: '[::1]' });
+  });
 });
 
 describe('matchesSite', () => {
