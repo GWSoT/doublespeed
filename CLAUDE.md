@@ -12,8 +12,11 @@ Doublespeed is a Chrome and Firefox extension that plays every web video at 2× 
   - `src/background/`: the background's own state: each tab's frame reports and its badge. The picking is in `src/lib/tab-speed.ts`.
   - `tests/e2e/`: Playwright specs, fixture pages in `pages/`, and test clips in `pages/media/` (made with ffmpeg; VP9/Opus WebM, because Playwright's Chromium has no H.264).
   - `public/_locales/en/messages.json`: every UI string.
+  - `assets/`: the icon's SVG sources; `make icons` renders them into `public/icon/`.
+  - `store/`: the store listing text (`listing.md`), its images, and their sources in `store/src/`; `make store-images` renders them with the built extension running.
+  - `scripts/`: the two image renderers, run with Playwright's Chromium.
   - `wxt.config.ts`: generates the manifest.
-- **Commands:** `make dev` opens Chrome with the extension live-reloading and `make dev-firefox` does the same in Firefox. `make test` runs Vitest. `make e2e` builds for Chrome and runs Playwright with the extension loaded; run `npx playwright install chromium` once first. `make lint` runs svelte-check (TS and Svelte, warnings fail) and `web-ext lint` on a Firefox build. `make zip` produces the store zips.
+- **Commands:** `make dev` opens Chrome with the extension live-reloading and `make dev-firefox` does the same in Firefox. `make test` runs Vitest. `make e2e` builds for Chrome and runs Playwright with the extension loaded; run `npx playwright install chromium` once first. `make lint` runs svelte-check (TS and Svelte, warnings fail) and `web-ext lint` on a Firefox build. `make zip` produces the store zips. `make icons` and `make store-images` re-render the icons and the store images; commit the PNGs.
 - **Ports:** :3210 for WXT's dev server and :3211 for the Playwright fixture server (`tests/e2e/fixture-server.ts`). The fixture server is reached as both `localhost` and `127.0.0.1` to get cross-origin iframes from one server. Both are off the ports other projects in `~/projects` claim (3000/3001, 3100, 5178, 7420s, 8080, 8100).
 - **Vocabulary:** SPEC §3 is the glossary (default speed, override, site reset, page site, site pattern…). Use its terms in code and docs.
 - **Hard requirements:**

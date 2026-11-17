@@ -1,4 +1,4 @@
-.PHONY: help install dev dev-firefox test e2e lint build zip
+.PHONY: help install dev dev-firefox test e2e lint build zip icons store-images
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -30,3 +30,10 @@ build: ## Build both browsers into .output/
 zip: ## Store-ready zips for both browsers in .output/
 	npm run zip
 	npm run zip:firefox
+
+icons: ## Render the icons in public/icon/ from assets/icon.svg and assets/icon-16.svg
+	node scripts/render-icons.mjs
+
+store-images: ## Build for Chrome, then render the store screenshot and promo tile into store/images/
+	npm run build
+	node scripts/render-store-images.mjs
