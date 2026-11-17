@@ -91,7 +91,7 @@ Manage the site list properly, run the same build on Firefox, and never fail sil
 **Slices:** ([#6](https://github.com/GWSoT/doublespeed/issues/6))
 
 1. **Options page.** The site list with remove buttons. The Add site field reduces a pasted URL to its hostname, has an **Include subdomains** checkbox for the `*.` form, says what it will turn off, and refuses duplicates, sites a `*.` rule already covers, and a full list. Shortcuts with a link to the browser's settings for them. The popup links to the page as "Site list". — [#20](https://github.com/GWSoT/doublespeed/issues/20), done in [#23](https://github.com/GWSoT/doublespeed/pull/23)
-2. **The popup when the extension can't run on the page.** It detects missing site access (`permissions.contains`) and offers a grant button, and it names the kind of page extensions can't touch: a browser page, an extension store, or a local file. — [#21](https://github.com/GWSoT/doublespeed/issues/21)
+2. **The popup when the extension can't run on the page.** It detects missing site access (`permissions.contains`) and offers a grant button, and it names the kind of page extensions can't touch: a browser page, an extension store, or a local file. Granting reloads the tab, since content scripts only arrive with the next load. — [#21](https://github.com/GWSoT/doublespeed/issues/21), done in [#25](https://github.com/GWSoT/doublespeed/pull/25)
 3. **Firefox.** Every Phase 1, 2 and 3 check, by hand, on Firefox 128 ESR and the current release. — [#22](https://github.com/GWSoT/doublespeed/issues/22)
 
 **Exit test:**
