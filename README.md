@@ -4,7 +4,8 @@
 
 A Chrome and Firefox extension that plays every web video at 2× by default. Change the speed
 of any video with `Alt+.` / `Alt+,`, flip between 1× and your default with `Alt+R`, and turn it
-off for sites where 2× makes no sense. It collects nothing and makes no network requests.
+off for sites where 2× makes no sense. It collects nothing and makes no network requests; see
+[PRIVACY.md](PRIVACY.md).
 
 Status: in development, not yet on the stores. See [ROADMAP.md](ROADMAP.md) for where it's at and
 [SPEC.md](SPEC.md) for how it behaves.
