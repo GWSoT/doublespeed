@@ -48,7 +48,7 @@ Doublespeed controls the playback speed of videos on web pages. It plays every v
 | Permission | Justification |
 |---|---|
 | `storage` | `Saves the user's settings: their default speed, the sites they turned it off on, and whether they've seen the shortcut hint. It also keeps each tab's video speed for the toolbar badge and the popup.` |
-| Host permission (`<all_urls>`) | `Videos can be on any site and inside any frame, so the content script has to run on every page to find each video element and set its playback speed. It reads nothing else from the page and sends nothing anywhere. Users can turn it off for any site from the popup.` |
+| Host permission (`<all_urls>`) | `Videos can be on any site and inside any frame, so the content script has to run on every page to find each video element and set its playback speed. To tell a speed the user chose from one the site set, it keeps only the time of the user's last click or key press in the page, never which key or where. Nothing from the page is stored or sent anywhere. Users can turn it off for any site from the popup.` |
 
 **Remote code:** No, I am not using remote code.
 
