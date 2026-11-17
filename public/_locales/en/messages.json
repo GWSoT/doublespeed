@@ -61,9 +61,29 @@
       }
     }
   },
-  "popupPageRestricted": {
-    "message": "Browsers don't let extensions run on this page.",
-    "description": "Shown instead of the site switch on browser pages (settings, new tab) and the extension stores."
+  "popupNoAccess": {
+    "message": "Doublespeed doesn't have access to this page. Allowing it reloads the page.",
+    "description": "Shown instead of the site switch when the browser withholds site access (Chrome's \"on click\" or specific sites, Firefox's add-on settings). A hidden page address can also mean a browser page; once access is allowed, the popup says so instead."
+  },
+  "popupGrantAccess": {
+    "message": "Allow on all sites",
+    "description": "Button under popupNoAccess. Asks the browser for access to every site; the page reloads once it's allowed."
+  },
+  "popupPageBrowser": {
+    "message": "Browsers don't let extensions run on their own pages.",
+    "description": "Shown instead of the site switch on browser pages: settings, the new tab page, about: pages, extension pages."
+  },
+  "popupPageBrowserOrFile": {
+    "message": "Browsers don't let extensions run on their own pages. If this is a file on your computer, Doublespeed needs access to file URLs.",
+    "description": "Chrome only. Shown instead of the site switch when the page's address is hidden and file access is off, so it's either a browser page or a local file; the extension can't tell which."
+  },
+  "popupFileAccess": {
+    "message": "Allow access to file URLs",
+    "description": "Link under popupPageBrowserOrFile. Opens the extension's details page in Chrome, where the switch has this same name."
+  },
+  "popupPageStore": {
+    "message": "Browsers don't let extensions run on extension stores.",
+    "description": "Shown instead of the site switch on the Chrome Web Store and addons.mozilla.org."
   },
   "popupPageNoSite": {
     "message": "This page isn't on a website, so there's no site to turn off.",

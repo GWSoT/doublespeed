@@ -3,8 +3,10 @@
   // speed. The switch and the default live in `storage.sync`; every content script picks up the
   // popup's writes from `storage.onChanged`, so videos react without a reload. The tab's speed
   // comes from the frames' reports in `storage.session` (the badge's), and −/+ sends the same
-  // message to the tab as the shortcuts.
+  // message to the tab as the shortcuts. Where the extension can't run, the switch's place says
+  // why, with a grant button when site access is withheld (SPEC §2.2).
   import { onMount } from 'svelte';
+  import { ACCESS_GRANT_KEY, accessGrantRequest } from '../../src/lib/access-grant';
   import {
     applyChanges,
     parseStored,
@@ -14,7 +16,7 @@
     type StorageItems,
     type Stored,
   } from '../../src/lib/settings';
-  import { siteSwitch } from '../../src/lib/site-switch';
+  import { accessOrigins, siteSwitch, type PageAccess, type UnavailableReason } from '../../src/lib/site-switch';
   import { canStepSpeed, stepSpeed } from '../../src/lib/speed';
   import { SPEED_COMMANDS, shortcutText, speedCommandMessage, type SpeedCommand } from '../../src/lib/speed-commands';
   import { parseTabFrames, tabKey, tabSpeed, type TabFrames } from '../../src/lib/tab-speed';
@@ -25,6 +27,7 @@
 
   let tabUrl = $state<string | undefined>();
   let tabId = $state<number | undefined>();
+  let access = $state.raw<PageAccess | null>(null);
   let frames = $state.raw<TabFrames>({});
   let stored = $state.raw<Stored | null>(null);
   /** The speed shortcuts as the browser has them bound; unbound ones are left out. */
@@ -33,7 +36,7 @@
   /** Writes not yet finished. Reads wait for them, so a quick second click builds on the first. */
   let writing = 0;
 
-  const site = $derived(stored && siteSwitch(tabUrl, stored.rules));
+  const site = $derived(stored && access && siteSwitch(tabUrl, stored.rules, access));
   const defaultSpeed = $derived(stored?.settings.defaultSpeed);
   const tab = $derived(tabSpeed(frames));
   const showHint = $derived(stored !== null && !stored.settings.shortcutHintDismissed && shortcuts.length > 0);
@@ -42,6 +45,13 @@
     'slow-down': 'popupHintSlowDown',
     'toggle-speed': 'popupHintToggle',
   } as const satisfies Record<SpeedCommand, MessageName>;
+  const UNAVAILABLE_NOTES = {
+    noAccess: 'popupNoAccess',
+    browserPage: 'popupPageBrowser',
+    browserPageOrFile: 'popupPageBrowserOrFile',
+    store: 'popupPageStore',
+    noSite: 'popupPageNoSite',
+  } as const satisfies Record<UnavailableReason, MessageName>;
 
   async function refresh() {
     if (writing) return;
@@ -52,6 +62,31 @@
       // Storage unavailable: show the defaults; a change will report that it couldn't save.
     }
     if (!writing) stored = parseStored(items);
+  }
+
+  /** The active tab's URL and the access that decides the switch; again when access changes. */
+  async function loadTab() {
+    try {
+      // The URL is hidden on pages we have no access to, which `siteSwitch` reports.
+      const tab =
+        tabId === undefined
+          ? (await browser.tabs.query({ active: true, currentWindow: true }))[0]
+          : await browser.tabs.get(tabId);
+      tabUrl = tab?.url;
+      tabId = tab?.id;
+    } catch {
+      tabUrl = undefined;
+    }
+    let siteAccess = false;
+    let files = true;
+    try {
+      siteAccess = await browser.permissions.contains({ origins: accessOrigins(tabUrl) });
+      // Firefox has no file-access switch: with site access it runs on `file:` pages too.
+      files = import.meta.env.FIREFOX || (await browser.extension.isAllowedFileSchemeAccess());
+    } catch {
+      // Treated as withheld: the grant button is the way out.
+    }
+    access = { site: siteAccess, files };
   }
 
   async function refreshTab() {
@@ -70,17 +105,13 @@
     const onSessionChanged = (changes: Record<string, unknown>) => {
       if (tabId !== undefined && tabKey(tabId) in changes) void refreshTab();
     };
+    const onPermissions = () => void loadTab();
     browser.storage.sync.onChanged.addListener(onChanged);
     browser.storage.session.onChanged.addListener(onSessionChanged);
+    browser.permissions.onAdded.addListener(onPermissions);
+    browser.permissions.onRemoved.addListener(onPermissions);
     void (async () => {
-      try {
-        // The URL is hidden on pages we have no access to, which `siteSwitch` reports.
-        const [active] = await browser.tabs.query({ active: true, currentWindow: true });
-        tabUrl = active?.url;
-        tabId = active?.id;
-      } catch {
-        tabUrl = undefined;
-      }
+      await loadTab();
       await Promise.all([refresh(), refreshTab()]);
     })();
     void (async () => {
@@ -97,6 +128,8 @@
     return () => {
       browser.storage.sync.onChanged.removeListener(onChanged);
       browser.storage.session.onChanged.removeListener(onSessionChanged);
+      browser.permissions.onAdded.removeListener(onPermissions);
+      browser.permissions.onRemoved.removeListener(onPermissions);
     };
   });
 
@@ -126,6 +159,28 @@
     } else if (site?.state === 'off') {
       void save({ [siteKey(site.pattern)]: undefined });
     }
+  }
+
+  /**
+   * Asks for access to every site. The request goes first, straight from the click: Firefox
+   * only prompts during the user's input. The background reloads the tab once it's granted; a
+   * refusal withdraws the request, if the popup is still open to see it.
+   */
+  function grantAccess() {
+    const answer = browser.permissions.request({ origins: ['<all_urls>'] });
+    if (tabId === undefined) return;
+    const recorded = browser.storage.session.set({ [ACCESS_GRANT_KEY]: accessGrantRequest(tabId, Date.now()) });
+    Promise.all([answer, recorded])
+      .then(([granted]) => (granted ? undefined : browser.storage.session.remove(ACCESS_GRANT_KEY)))
+      .catch(() => {});
+  }
+
+  /** Chrome's details page for the extension, where "Allow access to file URLs" is. */
+  function openFileAccess() {
+    browser.tabs.create({ url: `chrome://extensions/?id=${browser.runtime.id}` }).then(
+      () => window.close(),
+      () => {},
+    );
   }
 
   /** −/+ for this tab: the shortcuts' message, to every frame. The display follows the reports. */
@@ -162,9 +217,12 @@
     <section class="row site">
       <div class="text">
         {#if site.state === 'unavailable'}
-          <p class="note" id="site-note">
-            {t(site.reason === 'restricted' ? 'popupPageRestricted' : 'popupPageNoSite')}
-          </p>
+          <p class="note" id="site-note">{t(UNAVAILABLE_NOTES[site.reason])}</p>
+          {#if site.reason === 'noAccess'}
+            <button class="grant" onclick={grantAccess}>{t('popupGrantAccess')}</button>
+          {:else if site.reason === 'browserPageOrFile'}
+            <button class="link" onclick={openFileAccess}>{t('popupFileAccess')}</button>
+          {/if}
         {:else}
           <h2 class="host">{site.site}</h2>
           <p class="note" id="site-note">
@@ -404,7 +462,8 @@
     font-variant-numeric: tabular-nums;
     text-align: center;
   }
-  .dismiss {
+  .dismiss,
+  .grant {
     padding: 0.25rem 0.625rem;
     border: none;
     border-radius: 0.375rem;
@@ -414,7 +473,14 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .dismiss:focus-visible {
+  .grant {
+    margin-top: 0.5rem;
+  }
+  .site .link {
+    margin-top: 0.375rem;
+  }
+  .dismiss:focus-visible,
+  .grant:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }

@@ -1,4 +1,5 @@
 import { createTabBadges } from '../src/background/tab-badges';
+import { ACCESS_GRANT_KEY, tabToReload } from '../src/lib/access-grant';
 import { hostOfUrl, isGetPageSite } from '../src/lib/page-site';
 import { installSeed, SETTINGS_KEY } from '../src/lib/settings';
 import { isSpeedCommand, speedCommandMessage } from '../src/lib/speed-commands';
@@ -31,6 +32,20 @@ export default defineBackground(() => {
     badges.report(tabId, sender.frameId ?? 0, message.doc, message.state);
   });
   browser.tabs.onRemoved.addListener((tabId) => badges.forget(tabId));
+
+  // The popup's grant button (SPEC §2.2): once site access comes back, reload the tab the user
+  // asked from, since its content scripts only arrive with the next load.
+  browser.permissions.onAdded.addListener(async ({ origins }) => {
+    if (!origins?.length) return;
+    try {
+      const request = (await browser.storage.session.get(ACCESS_GRANT_KEY))[ACCESS_GRANT_KEY];
+      await browser.storage.session.remove(ACCESS_GRANT_KEY);
+      const tabId = tabToReload(request, Date.now());
+      if (tabId !== null) await browser.tabs.reload(tabId);
+    } catch {
+      // The tab closed meanwhile: nothing to reload.
+    }
+  });
 
   // The shortcuts (ADR-0005). With no `frameId`, the message reaches every frame in the tab.
   browser.commands.onCommand.addListener(async (command, tab) => {
