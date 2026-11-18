@@ -252,6 +252,26 @@ describe('a departed page’s report arriving after its replacement’s (issue #
     expect(fake.stored()).toEqual({});
     expect(fake.badge()).toBe('');
   });
+
+  it('still puts the live report back when the departed page reports once more meanwhile', async () => {
+    fake.frames.set(0, 'old-top');
+    badges.report(TAB, 0, 'old-top', at(1));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0]));
+    await settle();
+
+    const top = fake.busy(0);
+    badges.report(TAB, 0, 'new-top', at(2));
+    badges.report(TAB, 0, 'old-top', at(1.5));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    // Another late report from the old page: nothing the new page said, so its answer stands.
+    badges.report(TAB, 0, 'old-top', at(1.75));
+    await settle();
+    top.answer('new-top', at(2));
+    await settle();
+    expect(fake.stored()).toEqual({ 0: 'new-top' });
+    expect(fake.badge()).toBe('2×');
+  });
 });
 
 describe('a busy frame', () => {

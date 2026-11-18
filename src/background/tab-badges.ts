@@ -57,6 +57,13 @@ interface Check {
   answered: Promise<void>;
 }
 
+/** A `frameDoc` question still out (`verify`). */
+interface Question {
+  frameId: number;
+  /** The documents the frame has sent a report or a withdrawal from since it was asked. */
+  spoke: Set<string>;
+}
+
 export function createTabBadges(): TabBadges {
   /** This worker's copy of each tab's frames, so reports in a burst don't each read storage. */
   const cache = new Map<number, TabFrames>();
@@ -65,11 +72,11 @@ export function createTabBadges(): TabBadges {
   /** Each tab's next check, until it reads the tab's reports: what's asked for before then shares it. */
   const nextCheck = new Map<number, Check>();
   /**
-   * How many reports and withdrawals each frame of each tab has sent this worker, as they come
-   * in: so an answer can tell whether its frame has said anything since it was asked.
+   * Each tab's questions still out. Each notes the documents its frame has sent a report or a
+   * withdrawal from since it was asked, as they come in: so an answer can tell whether its own
+   * document has said anything newer.
    */
-  const heard = new Map<number, Map<number, number>>();
-  const heardFrom = (tabId: number, frameId: number) => heard.get(tabId)?.get(frameId) ?? 0;
+  const asked = new Map<number, Set<Question>>();
 
   function enqueue(tabId: number, work: () => Promise<void>): Promise<void> {
     const run = (queues.get(tabId) ?? Promise.resolve()).then(work).catch(() => {
@@ -124,12 +131,14 @@ export function createTabBadges(): TabBadges {
   /**
    * Asks one frame whether it still holds `doc`. If not, applies the withdrawal it never sent,
    * and puts back the report of the document it holds (`applyAnswer`). It puts nothing back
-   * once the frame has sent anything since the question: that may be newer than the answer, as
-   * a withdrawal is that found the stale report in its place and so removed nothing.
+   * once that document has sent anything since the question: that may be newer than the answer,
+   * as a withdrawal is that found the stale report in its place and so removed nothing.
    */
   async function verify(tabId: number, frameId: number, doc: string): Promise<void> {
     const query: FrameDocQuery = { type: 'frameDoc' };
-    const before = heardFrom(tabId, frameId);
+    const question: Question = { frameId, spoke: new Set() };
+    const out = asked.get(tabId) ?? new Set<Question>();
+    asked.set(tabId, out.add(question));
     const answer = await Promise.resolve()
       .then(() => browser.tabs.sendMessage(tabId, query, { frameId }))
       .then(
@@ -138,10 +147,15 @@ export function createTabBadges(): TabBadges {
         // or a new document whose content script hasn't started answering yet.
         () => null,
       );
-    if (answer?.doc === doc) return;
-    await update(tabId, (frames) =>
-      applyAnswer(frames, frameId, doc, heardFrom(tabId, frameId) === before ? answer : null),
-    );
+    try {
+      if (answer?.doc === doc) return;
+      await update(tabId, (frames) =>
+        applyAnswer(frames, frameId, doc, answer && question.spoke.has(answer.doc) ? null : answer),
+      );
+    } finally {
+      out.delete(question);
+      if (!out.size && asked.get(tabId) === out) asked.delete(tabId);
+    }
   }
 
   /**
@@ -170,8 +184,7 @@ export function createTabBadges(): TabBadges {
 
   return {
     report(tabId, frameId, doc, state) {
-      const frames = heard.get(tabId) ?? new Map<number, number>();
-      heard.set(tabId, frames.set(frameId, (frames.get(frameId) ?? 0) + 1));
+      for (const question of asked.get(tabId) ?? []) if (question.frameId === frameId) question.spoke.add(doc);
       void update(tabId, (frames) => applyReport(frames, frameId, doc, state), (before) => {
         // A report the tab didn't hold for this document (a new page, or a frame reporting
         // again), or a withdrawal. Either can come from a page that replaced, or is leaving,
@@ -199,7 +212,6 @@ export function createTabBadges(): TabBadges {
     },
 
     forget(tabId) {
-      heard.delete(tabId);
       void enqueue(tabId, async () => {
         cache.delete(tabId);
         await browser.storage.session.remove(tabKey(tabId));
