@@ -24,14 +24,33 @@ export interface FrameState {
 }
 
 /**
- * A frame's report. `doc` is a random id per document, so a late `null` from the page the tab
- * just left can't erase what the new page in the same frame has reported.
+ * A frame's report. `doc` is a random id per document, and new after a restore from the
+ * back/forward cache, so a late `null` from the page the tab just left can't erase what the new
+ * page in the same frame has reported.
  */
 export interface FrameStateMessage {
   type: 'frameState';
   doc: string;
   /** `null`: nothing to show from this frame (no video, or the document is going away). */
   state: FrameState | null;
+}
+
+/**
+ * Asks one frame, through `tabs.sendMessage` with its `frameId`, which document it holds. The
+ * frame's content script answers with the `doc` of its reports, or `null` once that document is
+ * going away.
+ */
+export interface FrameDocQuery {
+  type: 'frameDoc';
+}
+
+/**
+ * From the popup, before it reads a tab's reports: drop the stale ones. Answered once every
+ * frame has answered, or after half a second.
+ */
+export interface CheckTabMessage {
+  type: 'checkTab';
+  tabId: number;
 }
 
 /** What the background keeps per frame. */
@@ -102,6 +121,14 @@ export function badgeText(tab: TabSpeed, off: string, wholeSpeed: (speed: string
 export function isFrameStateMessage(message: unknown): message is FrameStateMessage {
   if (!isRecord(message) || message.type !== 'frameState' || typeof message.doc !== 'string') return false;
   return message.state === null || isFrameState(message.state);
+}
+
+export function isFrameDocQuery(message: unknown): message is FrameDocQuery {
+  return isRecord(message) && message.type === 'frameDoc';
+}
+
+export function isCheckTabMessage(message: unknown): message is CheckTabMessage {
+  return isRecord(message) && message.type === 'checkTab' && Number.isInteger(message.tabId);
 }
 
 /** Reads a tab's frames from `storage.session`, dropping anything malformed. */

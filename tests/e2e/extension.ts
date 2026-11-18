@@ -9,14 +9,21 @@ import { resolve } from 'node:path';
 
 const EXTENSION = resolve(import.meta.dirname, '../../.output/chrome-mv3');
 
-export const test = base.extend<{ context: BrowserContext; storage: ExtensionStorage }>({
-  context: async ({}, use) => {
+export const test = base.extend<{ bfcache: boolean; context: BrowserContext; storage: ExtensionStorage }>({
+  /**
+   * Keep the browser's back/forward cache on, which Playwright turns off. The fixture server
+   * only lets pages into it when they're asked for with `?bfcache`.
+   */
+  bfcache: [false, { option: true }],
+
+  context: async ({ bfcache }, use) => {
     if (!existsSync(resolve(EXTENSION, 'manifest.json'))) {
       throw new Error(`No build at ${EXTENSION}. Run \`npm run build\` (or \`make e2e\`).`);
     }
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
       args: [`--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`],
+      ignoreDefaultArgs: bfcache ? ['--disable-back-forward-cache'] : [],
     });
     await use(context);
     await context.close();
@@ -129,14 +136,24 @@ export async function pressShortcut(context: BrowserContext, page: Page, command
   );
 }
 
-/** The toolbar badge's text for `page`'s tab. */
-export async function badge(context: BrowserContext, page: Page): Promise<string> {
+/**
+ * The id of `page`'s tab, found by its URL. Take it before the tab moves to a browser page,
+ * whose URL the extension can't see.
+ */
+export async function tabIdOf(context: BrowserContext, page: Page): Promise<number> {
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
   return worker.evaluate(async (url) => {
     const tab = (await chrome.tabs.query({})).find((t) => t.url === url);
-    if (!tab) throw new Error(`no tab at ${url}`);
-    return chrome.action.getBadgeText({ tabId: tab.id });
+    if (tab?.id === undefined) throw new Error(`no tab at ${url}`);
+    return tab.id;
   }, page.url());
+}
+
+/** The toolbar badge's text for `page`'s tab, or for the tab with that id. */
+export async function badge(context: BrowserContext, target: Page | number): Promise<string> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  const tabId = typeof target === 'number' ? target : await tabIdOf(context, target);
+  return worker.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId);
 }
 
 export interface SpeedLabelState {
@@ -211,4 +228,17 @@ function findNode(node: DomNode, matches: (node: DomNode) => boolean): DomNode |
 export async function frameByUrl(page: Page, matches: (url: string) => boolean): Promise<Frame> {
   await expect.poll(() => page.frames().some((f) => matches(f.url()))).toBe(true);
   return page.frames().find((f) => matches(f.url()))!;
+}
+
+/**
+ * The frame reports the background keeps for `page`'s tab, or for the tab with that id (SPEC §4,
+ * `tab:<tabId>`), by frame id.
+ */
+export async function tabReports(context: BrowserContext, target: Page | number): Promise<Record<string, unknown>> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  const tabId = typeof target === 'number' ? target : await tabIdOf(context, target);
+  return worker.evaluate(async (id) => {
+    const key = `tab:${id}`;
+    return ((await chrome.storage.session.get(key))[key] ?? {}) as Record<string, unknown>;
+  }, tabId);
 }

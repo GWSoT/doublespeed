@@ -2,6 +2,8 @@
  * Serves tests/e2e/pages on :3211 for the Playwright suite. Pages load each other through
  * both `localhost` and `127.0.0.1`, which the browser treats as different origins, to get
  * cross-origin iframes from a single server. Supports Range requests like a real media host.
+ * Everything is `no-store`, which keeps pages out of the back/forward cache, except pages asked
+ * for with `?bfcache`.
  */
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -16,7 +18,8 @@ const TYPES: Record<string, string> = {
 };
 
 createServer((req, res) => {
-  const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  const pathname = decodeURIComponent(url.pathname);
   const file = normalize(join(ROOT, pathname));
   let size: number;
   try {
@@ -32,7 +35,7 @@ createServer((req, res) => {
   const headers = {
     'content-type': TYPES[extname(file)] ?? 'application/octet-stream',
     'accept-ranges': 'bytes',
-    'cache-control': 'no-store',
+    'cache-control': url.searchParams.has('bfcache') ? 'no-cache' : 'no-store',
   };
   const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
   if (range && (range[1] || range[2])) {

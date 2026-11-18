@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   applyReport,
   badgeText,
+  isCheckTabMessage,
+  isFrameDocQuery,
   isFrameStateMessage,
   parseTabFrames,
   pickVideo,
@@ -126,6 +128,15 @@ describe('messages and storage', () => {
       false,
     );
     expect(isFrameStateMessage({ type: 'speedCommand', command: 'speed-up' })).toBe(false);
+  });
+
+  it('tells the background’s and the popup’s questions apart from the rest', () => {
+    expect(isFrameDocQuery({ type: 'frameDoc' })).toBe(true);
+    expect(isFrameDocQuery({ type: 'frameState', doc: 'a', state: null })).toBe(false);
+    expect(isCheckTabMessage({ type: 'checkTab', tabId: 12 })).toBe(true);
+    expect(isCheckTabMessage({ type: 'checkTab', tabId: '12' })).toBe(false);
+    expect(isCheckTabMessage({ type: 'checkTab' })).toBe(false);
+    expect(isCheckTabMessage(null)).toBe(false);
   });
 
   it('reads stored frames, dropping malformed ones', () => {

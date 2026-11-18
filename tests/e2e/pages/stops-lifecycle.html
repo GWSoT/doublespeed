@@ -1,0 +1,12 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>stops lifecycle</title>
+<script>
+  // A page that stops the lifecycle events it's asked to (`?stop=pageshow`, repeatable) from
+  // reaching any listener registered after its own, in the capture phase, where its listeners
+  // run first unless a content script's were registered before it.
+  for (const type of new URLSearchParams(location.search).getAll('stop')) {
+    window.addEventListener(type, (event) => event.stopImmediatePropagation(), true);
+  }
+</script>
+<video id="v" src="/media/clip.webm" preload="auto" muted></video>

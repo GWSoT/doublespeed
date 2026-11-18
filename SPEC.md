@@ -136,7 +136,7 @@ Overrides never sync and never survive a reload.
 
 | Key | Value | Notes |
 |---|---|---|
-| `tab:<tabId>` | `{ [frameId]: { doc, off, video: { speed, playing, playedAt } \| null } }` | Each frame's report for the badge, and for the popup's speed for this tab. A frame sends one only when it has something to show, and withdraws it on `pagehide`; `doc` is per document, so a late withdrawal from the page a tab just left can't erase the new one. Removed when the tab closes. |
+| `tab:<tabId>` | `{ [frameId]: { doc, off, video: { speed, playing, playedAt } \| null } }` | Each frame's report for the badge, and for the popup's speed for this tab. A frame sends one only when it has something to show, and withdraws it on `pagehide`; `doc` is per document, and new each time a page comes back from the back/forward cache, so a late withdrawal from the page a tab just left can't erase the new one. A withdrawal can also go missing, as it does when the tab moves to a browser page, so the background asks each frame with a report whether it still holds that report's `doc`, and applies the missing withdrawal when it doesn't. It asks when a report comes from a document the tab doesn't hold for that frame (a new page, or one reporting again), when a withdrawal removes a report, and when the popup opens; the popup waits up to half a second for the answers, and a later answer still counts. A prerendered page reports only once it's shown. Removed when the tab closes. |
 | `accessGrant` | `{ tabId, at }` | The tab the popup's grant button was pressed in, and when. The next time site access is granted, the background removes it, and reloads that tab if the request is under two minutes old. |
 
 ## 5. Architecture
@@ -158,7 +158,7 @@ Overrides never sync and never survive a reload.
           ├ badge per tab               │
           ├ reload after a grant        │
           └ install seeding ────────────┘
-        popup (Svelte) ── messages to tab, reads/writes storage.sync
+        popup (Svelte) ── messages to tab and background, reads/writes storage.sync
         options (Svelte) ── reads/writes storage.sync
 ```
 

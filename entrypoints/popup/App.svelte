@@ -3,8 +3,9 @@
   // speed. The switch and the default live in `storage.sync`; every content script picks up the
   // popup's writes from `storage.onChanged`, so videos react without a reload. The tab's speed
   // comes from the frames' reports in `storage.session` (the badge's), and −/+ sends the same
-  // message to the tab as the shortcuts. Where the extension can't run, the switch's place says
-  // why, with a grant button when site access is withheld (SPEC §2.2).
+  // message to the tab as the shortcuts. The background first drops the reports of pages the tab
+  // has left. Where the extension can't run, the switch's place says why, with a grant button
+  // when site access is withheld (SPEC §2.2).
   import { onMount } from 'svelte';
   import { ACCESS_GRANT_KEY, accessGrantRequest } from '../../src/lib/access-grant';
   import {
@@ -25,7 +26,7 @@
   } from '../../src/lib/site-switch';
   import { canStepSpeed, stepSpeed } from '../../src/lib/speed';
   import { SPEED_COMMANDS, shortcutText, speedCommandMessage, type SpeedCommand } from '../../src/lib/speed-commands';
-  import { parseTabFrames, tabKey, tabSpeed, type TabFrames } from '../../src/lib/tab-speed';
+  import { parseTabFrames, tabKey, tabSpeed, type CheckTabMessage, type TabFrames } from '../../src/lib/tab-speed';
 
   type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
   const t = (key: MessageName, ...substitutions: string[]) => browser.i18n.getMessage(key, substitutions);
@@ -34,7 +35,10 @@
   let tabUrl = $state<string | undefined>();
   let tabId = $state<number | undefined>();
   let access = $state.raw<PageAccess | null>(null);
-  let frames = $state.raw<TabFrames>({});
+  /** The tab's frame reports, once the background has checked them; `null` until then. */
+  let frames = $state.raw<TabFrames | null>(null);
+  /** The check is done, so changes to the reports can be shown as they come. */
+  let checked = false;
   let stored = $state.raw<Stored | null>(null);
   /** The speed shortcuts as the browser has them bound; unbound ones are left out. */
   let shortcuts = $state.raw<{ command: SpeedCommand; keys: string }[]>([]);
@@ -44,7 +48,7 @@
 
   const site = $derived(stored && access && siteSwitch(tabUrl, stored.rules, access));
   const defaultSpeed = $derived(stored?.settings.defaultSpeed);
-  const tab = $derived(tabSpeed(frames));
+  const tab = $derived(tabSpeed(frames ?? {}));
   const showHint = $derived(stored !== null && !stored.settings.shortcutHintDismissed && shortcuts.length > 0);
   const HINT_LABELS = {
     'speed-up': 'popupHintSpeedUp',
@@ -107,7 +111,10 @@
   }
 
   async function refreshTab() {
-    if (tabId === undefined) return;
+    if (tabId === undefined) {
+      frames = {};
+      return;
+    }
     const key = tabKey(tabId);
     try {
       frames = parseTabFrames((await browser.storage.session.get(key))[key]);
@@ -116,11 +123,27 @@
     }
   }
 
+  /**
+   * The tab's reports, after the background has dropped those of pages the tab has left: a page's
+   * withdrawal doesn't arrive when the tab moves to a browser page (issue #26).
+   */
+  async function checkTab() {
+    if (tabId !== undefined) {
+      try {
+        await browser.runtime.sendMessage({ type: 'checkTab', tabId } satisfies CheckTabMessage);
+      } catch {
+        // No answer from the background: show the reports as they are.
+      }
+    }
+    checked = true;
+    await refreshTab();
+  }
+
   onMount(() => {
     // Listening before the first reads, so nothing changed meanwhile is missed.
     const onChanged = () => void refresh();
     const onSessionChanged = (changes: Record<string, unknown>) => {
-      if (tabId !== undefined && tabKey(tabId) in changes) void refreshTab();
+      if (checked && tabId !== undefined && tabKey(tabId) in changes) void refreshTab();
     };
     const onPermissions = () => void loadTab();
     browser.storage.sync.onChanged.addListener(onChanged);
@@ -129,7 +152,7 @@
     browser.permissions.onRemoved.addListener(onPermissions);
     void (async () => {
       await loadTab();
-      await Promise.all([refresh(), refreshTab()]);
+      await Promise.all([refresh(), checkTab()]);
     })();
     void (async () => {
       try {
@@ -275,7 +298,9 @@
           onclick={() => stepTab('slow-down')}>−</button
         >
         <output aria-live="polite" class:quiet={tab.kind !== 'speed'}>
-          {#if tab.kind === 'speed'}
+          {#if frames === null}
+            <!-- Still checking: nothing rather than a speed the tab may no longer have. -->
+          {:else if tab.kind === 'speed'}
             {speedLabel(tab.speed)}
           {:else if tab.kind === 'off'}
             {t('popupTabOff')}
