@@ -94,20 +94,31 @@ before that upload.
 - **Description, keyword count:** "video" is in it seven times and "speed" six, not counting
   "Doublespeed"; bring each to five or fewer. 0.1.0 had six of each and was flagged only for its
   list; 0.1.1's rewritten first bullet added the seventh "video".
-- **Description, claims:** three have exceptions. Word them so they hold.
+- **Description, claims:** four have exceptions. Word them so they hold.
   - "every video on the web at 2× from the first frame" misses sites where the user withheld
-    Doublespeed's access (SPEC §2.2), and a custom-element player defined after load that
-    autoplays with no later DOM change or click (SPEC §5's known gap).
+    Doublespeed's access (SPEC §2.2); a custom-element player defined after load that autoplays
+    with no later DOM change or click (SPEC §5's known gap); and a video that starts playing
+    before the content script has read its settings, which it does before it looks for videos
+    (`entrypoints/content.ts`).
+  - "change a video's speed with the site's own menu … and that video keeps it" misses an
+    embedding page that sets an iframe player's speed through the player's API: the click is in
+    the parent frame, which rule 3 doesn't see, so the change counts as a site reset (SPEC §3.2,
+    rules 3 and 4).
   - "Doublespeed sets it back" stops once a site resets the speed of the same source more than
     ~5 times in ~10 s (SPEC §3.2, rule 4).
   - "a small label shows on the video when you change it" holds only for the shortcuts and the
     popup's "This tab" −/+, and only over videos in view (SPEC §3.2, rule 5): not for the default
     speed's −/+ or the site's own speed menu.
-- **Data usage:** decide whether to tick "Web history". The User Data FAQ says on-device handling
-  must be disclosed too and counts the URLs the browser visits as browsing activity, and
-  Doublespeed reads each page's address: to check it against the site list, and in the popup to
-  tell whether it can run there. The only addresses it keeps are the sites the user turned it off
-  on.
+- **Data usage:** decide whether to tick "Web history" and "User activity". The User Data FAQ
+  says on-device handling must be disclosed too and counts the URLs the browser visits as browsing
+  activity. The form defines web history as the list of pages the user opened, with titles and
+  visit times, and user activity as network monitoring, clicks, mouse position, scrolling or key
+  presses (checked in the dashboard 2026-11-18). Doublespeed reads each page's address,
+  to check it against the site list and, in the popup, to tell whether it can run there. In a
+  page's memory it holds the time of the last trusted click or key press (never which key or
+  where) and each video's source address, gone when the page closes. The only addresses it
+  stores are the site list's patterns: the sites it's off on, music.youtube.com included. If
+  either box is ticked, reword "collects nothing" in the description and in PRIVACY.md to match.
 - **Test instructions:** clicking the toolbar icon opens the popup; turning the site off is the
   popup's switch. Say both steps.
 - **addons.mozilla.org:** the description's shortcut line points to
@@ -115,6 +126,6 @@ before that upload.
   Firefox can't open the settings itself: open about:addons, click the gear button, and choose
   Manage Extension Shortcuts.
 - **Host permission justification:** "Nothing from the page is stored" reads as if nothing is
-  kept, while each tab's video speed is (the storage justification says so), and so are the sites
-  the user turns it off on, taken from the page's address. Make it agree with
+  kept, while each tab's video speed is (the storage justification says so), and so is the site
+  list, usually taken from a page's address. Make it agree with
   [`PRIVACY.md`](../PRIVACY.md).
