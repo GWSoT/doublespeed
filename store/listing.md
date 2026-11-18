@@ -5,20 +5,21 @@ What goes into the Chrome Web Store's developer dashboard, field by field. The i
 2026-11-17 and was rejected the next day for its description; 0.1.1 went to review on 2026-11-18
 with the text below (ROADMAP risk 4). The images are in [`images/`](images/), made by
 `make store-images`; the store icon is [`public/icon/128.png`](../public/icon/128.png), made by
-`make icons`. addons.mozilla.org reuses the same text in Phase 3.
+`make icons`. addons.mozilla.org reuses the same text in Phase 4.
 
 The name and the one-line summary come from the manifest (`extName` and `extDescription` in
 [`messages.json`](../public/_locales/en/messages.json)), so they aren't repeated here.
 
 ## Store listing tab
 
-**Description:** keep to Google's keyword-spam rules
-([troubleshooting page](https://developer.chrome.com/docs/webstore/troubleshooting/#keyword-stuffing)).
-No lists of the sites it works on: a bullet naming six of them got 0.1.0 rejected ("Yellow
-Argon"). Naming one site for a reason, like music.youtube.com below, isn't a list; the policy
-targets lists "without substantial added value". No keyword more than five times either. The
-text below is what 0.1.1 went to review with; [Before the next upload](#before-the-next-upload)
-says what to change in it.
+**Description:** Google's keyword-spam policy ([troubleshooting][keyword-spam]) rules out lists
+of sites "without substantial added value" and "unnatural repetition of the same keyword more
+than 5 times". A bullet naming six sites got 0.1.0 rejected ("Yellow Argon"), so our own rule is
+stricter: name no sites it works on, except one for a reason (music.youtube.com below), and use
+no keyword more than five times. The text below is what 0.1.1 went to review with;
+[Before the next upload](#before-the-next-upload) says what to change in it.
+
+[keyword-spam]: https://developer.chrome.com/docs/webstore/troubleshooting/#keyword-stuffing
 
 ```text
 Doublespeed plays every video on the web at 2× from the first frame, so you never have to hunt for a speed menu again.
@@ -88,11 +89,18 @@ No account or setup needed. Open any video, for example https://www.youtube.com/
 0.1.1's listing went to review as written above. Change these with the next package rather than
 by withdrawing that review:
 
-- **Description, keyword count:** "video" is in it seven times; bring it to five or fewer. 0.1.0
-  had the same count and was flagged only for its list.
-- **Description, claims:** "every video on the web at 2× from the first frame" and "Doublespeed
-  sets it back" both have exceptions: the late-defined players SPEC §5 calls the known gap, and a
-  source that resets more than ~5 times in ~10 s (SPEC §3.2, rule 4). Word them so they hold.
+- **Description, keyword count:** "video" is in it seven times and "speed" six, not counting
+  "Doublespeed"; bring each to five or fewer. 0.1.0 had six of each and was flagged only for its
+  list; 0.1.1's rewritten first bullet added the seventh "video".
+- **Description, claims:** two have exceptions. "Every video on the web at 2× from the first
+  frame" misses a player defined after load with no later DOM change or click (SPEC §5's known
+  gap). "Doublespeed sets it back" stops once a site resets one source more than ~5 times in
+  ~10 s (SPEC §3.2, rule 4). Word them so they hold.
+- **Test instructions:** clicking the toolbar icon opens the popup; turning the site off is the
+  popup's switch. Say both steps.
+- **addons.mozilla.org:** the description's shortcut line points to
+  `chrome://extensions/shortcuts`. On Firefox, say what the options page says: open
+  about:addons, click the gear button, and choose Manage Extension Shortcuts.
 - **Host permission justification:** "Nothing from the page is stored" reads as if nothing is
   kept, while the storage justification says each tab's video speed is. Make the two agree with
   [`PRIVACY.md`](../PRIVACY.md).
