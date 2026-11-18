@@ -2,21 +2,23 @@
 
 What goes into the Chrome Web Store's developer dashboard, field by field. The item is
 `adocdalonhmgamdohammiefgchljljef`, published by GWOSTIK. 0.1.0 went to review, unlisted, on
-2026-11-17 and was rejected the next day for the description (below); 0.1.1 went to review on
-2026-11-18 with the fixed text. The images are in [`images/`](images/), made by `make store-images`; the store icon is
-[`public/icon/128.png`](../public/icon/128.png), made by `make icons`. addons.mozilla.org reuses
-the same text in Phase 3.
+2026-11-17 and was rejected the next day for its description; 0.1.1 went to review on 2026-11-18
+with the text below (ROADMAP risk 4). The images are in [`images/`](images/), made by
+`make store-images`; the store icon is [`public/icon/128.png`](../public/icon/128.png), made by
+`make icons`. addons.mozilla.org reuses the same text in Phase 3.
 
 The name and the one-line summary come from the manifest (`extName` and `extDescription` in
 [`messages.json`](../public/_locales/en/messages.json)), so they aren't repeated here.
 
 ## Store listing tab
 
-**Description:** no lists of the sites it works on. 0.1.0 was rejected on 2026-11-18 for keyword
-stuffing ("Yellow Argon") over one bullet that named six sites; Google's
-[troubleshooting page](https://developer.chrome.com/docs/webstore/troubleshooting/#keyword-stuffing)
-gives exactly that as its example. Naming one site for a reason, like music.youtube.com below,
-isn't a list: the policy targets lists "without substantial added value".
+**Description:** keep to Google's keyword-spam rules
+([troubleshooting page](https://developer.chrome.com/docs/webstore/troubleshooting/#keyword-stuffing)).
+No lists of the sites it works on: a bullet naming six of them got 0.1.0 rejected ("Yellow
+Argon"). Naming one site for a reason, like music.youtube.com below, isn't a list; the policy
+targets lists "without substantial added value". No keyword more than five times either. The
+text below is what 0.1.1 went to review with; [Before the next upload](#before-the-next-upload)
+says what to change in it.
 
 ```text
 Doublespeed plays every video on the web at 2× from the first frame, so you never have to hunt for a speed menu again.
@@ -64,16 +66,33 @@ Doublespeed controls the playback speed of videos on web pages. It plays every v
 **Data usage:** tick none of the data types. Tick all three certifications (no selling or
 transfer, no use unrelated to the single purpose, no use for credit decisions).
 
-**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. The store
-asks for one only when user data is collected, and none is, but it costs nothing to give.
+**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. Google
+requires one from every extension that handles user data, even only on the device
+([User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)), and
+Doublespeed reads each page's address to check it against the site list. 0.1.0 went without one;
+0.1.1 has it.
 
 ## Distribution tab
 
-**Payments:** free. **Visibility:** unlisted for the first upload (ROADMAP risk 4), public at
-launch. **Regions:** all.
+**Payments:** free. **Visibility:** unlisted until launch (ROADMAP risk 4), then public.
+**Regions:** all.
 
 ## Test instructions tab
 
 ```text
 No account or setup needed. Open any video, for example https://www.youtube.com/watch?v=jNQXAC9IVRw. It plays at 2×, and the toolbar icon shows "2×". Press Alt+. to go to 2.25×; a label shows the new speed on the video. Click the toolbar icon to turn it off for the site.
 ```
+
+## Before the next upload
+
+0.1.1's listing went to review as written above. Change these with the next package rather than
+by withdrawing that review:
+
+- **Description, keyword count:** "video" is in it seven times; bring it to five or fewer. 0.1.0
+  had the same count and was flagged only for its list.
+- **Description, claims:** "every video on the web at 2× from the first frame" and "Doublespeed
+  sets it back" both have exceptions: the late-defined players SPEC §5 calls the known gap, and a
+  source that resets more than ~5 times in ~10 s (SPEC §3.2, rule 4). Word them so they hold.
+- **Host permission justification:** "Nothing from the page is stored" reads as if nothing is
+  kept, while the storage justification says each tab's video speed is. Make the two agree with
+  [`PRIVACY.md`](../PRIVACY.md).
