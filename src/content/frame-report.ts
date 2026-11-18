@@ -6,6 +6,8 @@
  *   show, so pages without videos never wake the background.
  * - Leaving the page (`pagehide`) withdraws the report. Coming back from the back/forward cache
  *   (`pageshow`) sends it again.
+ * - A page the browser prerenders reports only once it's shown (`prerenderingchange`): until
+ *   then it isn't the page in the tab, and Chrome gives its top frame another `frameId`.
  * - Reports carry an id for this document, so the background can tell a late withdrawal from
  *   the page the tab just left apart from the new page in the same frame.
  * - Asked which document the frame holds (`FrameDocQuery`), it answers with that id, so the
@@ -16,6 +18,11 @@ import { isFrameDocQuery, type FrameState, type FrameStateMessage } from '../lib
 export interface FrameReporter {
   /** Something changed that may change the report; sends it, at most once per task. */
   changed(): void;
+}
+
+/** Whether Chrome is prerendering this page. Firefox doesn't prerender, and TypeScript's DOM types lack it. */
+function prerendering(): boolean {
+  return (document as Document & { prerendering?: boolean }).prerendering === true;
 }
 
 export function reportFrame(read: () => FrameState | null, signal: AbortSignal): FrameReporter {
@@ -36,7 +43,7 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal):
 
   function flush(): void {
     scheduled = false;
-    if (hidden || signal.aborted) return;
+    if (hidden || signal.aborted || prerendering()) return;
     const state = read();
     const json = JSON.stringify(state);
     if (json === sent) return;
@@ -70,6 +77,9 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal):
     },
     listen,
   );
+  if (prerendering()) {
+    document.addEventListener('prerenderingchange', () => reporter.changed(), { once: true, signal });
+  }
   window.addEventListener(
     'pageshow',
     (event) => {

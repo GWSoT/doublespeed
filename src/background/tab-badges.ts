@@ -4,13 +4,15 @@
  * that wakes for one frame's report still knows the others. The popup reads the same items to
  * show the tab's speed.
  *
- * A report stays only while its frame holds the document that sent it (`dropGone`). The
- * frames are asked when a new document reports in the tab, and when the popup opens.
+ * A frame withdraws its report on `pagehide`, but that message can go missing: it does when the
+ * tab moves to a browser page, where nothing runs to replace the report (issue #26). So the
+ * background asks each frame with a report whether it still holds the document that sent it,
+ * and applies the missing withdrawal when it doesn't. It asks when a report comes from a
+ * document the tab doesn't hold yet, and when the popup opens.
  */
 import {
   applyReport,
   badgeText,
-  dropGone,
   parseTabFrames,
   tabKey,
   tabSpeed,
@@ -24,14 +26,19 @@ const SPEED_COLOR = '#7c3aed';
 const OFF_COLOR = '#6b6775';
 
 /**
- * How long a frame gets to say which document it holds. A frame with nothing to answer fails at
- * once, so only a live frame that's busy takes longer, and it's kept.
+ * How long the popup waits for the frames' answers before it shows the tab's speed. A frame
+ * with nothing to answer fails at once, so only a live frame that's busy takes longer, and its
+ * answer still counts when it comes.
  */
-const ANSWER_MS = 500;
+export const CHECK_WAIT_MS = 500;
 
 export interface TabBadges {
   report(tabId: number, frameId: number, doc: string, state: FrameState | null): void;
-  /** Drops the tab's stale reports; resolves once that's done, or failed. */
+  /**
+   * Asks every frame with a report in the tab whether it still holds that report's document,
+   * and drops the reports whose frame doesn't. Resolves once all have answered, or after
+   * `CHECK_WAIT_MS`; a later answer still drops its report.
+   */
   check(tabId: number): Promise<void>;
   forget(tabId: number): void;
 }
@@ -41,6 +48,8 @@ export function createTabBadges(): TabBadges {
   const cache = new Map<number, TabFrames>();
   /** Work per tab runs in order, so two quick reports can't both build on the same old state. */
   const queues = new Map<number, Promise<void>>();
+  /** Questions out to frames, by tab, frame and document, so none is asked twice at once. */
+  const asking = new Map<string, Promise<void>>();
 
   function enqueue(tabId: number, work: () => Promise<void>): Promise<void> {
     const run = (queues.get(tabId) ?? Promise.resolve()).then(work).catch(() => {
@@ -61,12 +70,20 @@ export function createTabBadges(): TabBadges {
     return parseTabFrames((await browser.storage.session.get(key))[key]);
   }
 
-  async function store(tabId: number, frames: TabFrames): Promise<void> {
-    cache.set(tabId, frames);
-    const key = tabKey(tabId);
-    if (Object.keys(frames).length) await browser.storage.session.set({ [key]: frames });
-    else await browser.storage.session.remove(key);
-    await show(tabId, frames);
+  /** Applies one frame's report, or its withdrawal (`null`), and shows the result. */
+  function apply(tabId: number, frameId: number, doc: string, state: FrameState | null): Promise<TabFrames | null> {
+    let before: TabFrames | null = null;
+    return enqueue(tabId, async () => {
+      const frames = await load(tabId);
+      const next = applyReport(frames, frameId, doc, state);
+      if (next === frames) return;
+      before = frames;
+      cache.set(tabId, next);
+      const key = tabKey(tabId);
+      if (Object.keys(next).length) await browser.storage.session.set({ [key]: next });
+      else await browser.storage.session.remove(key);
+      await show(tabId, next);
+    }).then(() => before);
   }
 
   async function show(tabId: number, frames: TabFrames): Promise<void> {
@@ -78,48 +95,55 @@ export function createTabBadges(): TabBadges {
     await browser.action.setBadgeText({ tabId, text });
   }
 
-  /** Whether frame `frameId` of the tab still holds document `doc`; true if it's too busy to say. */
-  async function holds(tabId: number, frameId: number, doc: string): Promise<boolean> {
+  /** Asks one frame whether it still holds `doc`; if not, applies the withdrawal it never sent. */
+  function verify(tabId: number, frameId: number, doc: string): Promise<void> {
+    const key = `${tabId}:${frameId}:${doc}`;
+    const pending = asking.get(key);
+    if (pending) return pending;
     const query: FrameDocQuery = { type: 'frameDoc' };
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const busy = new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => resolve(true), ANSWER_MS);
+    const asked = Promise.resolve()
+      .then(() => browser.tabs.sendMessage(tabId, query, { frameId }))
+      .then(
+        (held: unknown) => held === doc,
+        // Nothing there answers: no frame by that id, a page the content script can't run on,
+        // or a new document whose content script hasn't started answering yet.
+        () => false,
+      )
+      .then(async (holds) => {
+        if (!holds) await apply(tabId, frameId, doc, null);
+      })
+      .finally(() => asking.delete(key));
+    asking.set(key, asked);
+    return asked;
+  }
+
+  /** `verify` for every report in the tab, once the reports already queued are in. */
+  async function verifyAll(tabId: number): Promise<void> {
+    let frames: TabFrames = {};
+    await enqueue(tabId, async () => {
+      frames = await load(tabId);
     });
-    const answer = browser.tabs.sendMessage(tabId, query, { frameId }).then(
-      (held: unknown) => held === doc,
-      // Nothing there answers: no frame by that id, a page the content script can't run on, or
-      // a new document whose content script hasn't started answering yet.
-      () => false,
-    );
-    try {
-      return await Promise.race([answer, busy]);
-    } finally {
-      clearTimeout(timer);
-    }
+    await Promise.all(Object.entries(frames).map(([frameId, frame]) => verify(tabId, Number(frameId), frame.doc)));
   }
 
   return {
     report(tabId, frameId, doc, state) {
-      void enqueue(tabId, async () => {
-        const loaded = await load(tabId);
-        let frames = loaded;
-        // A report the tab doesn't hold yet for this document: a new page, or a frame reporting
-        // again. The page it belongs to may have replaced documents whose withdrawals never
-        // arrived, so the other frames are asked first.
-        if (state && frames[frameId]?.doc !== doc) {
-          frames = await dropGone(frames, (id, held) => holds(tabId, id, held), frameId);
-        }
-        const next = applyReport(frames, frameId, doc, state);
-        if (next !== loaded) await store(tabId, next);
+      void apply(tabId, frameId, doc, state).then((before) => {
+        // A report the tab didn't hold for this document: a new page, or a frame reporting
+        // again. Its page may have replaced documents whose withdrawals never arrived, and it
+        // may itself be gone already, so every frame is asked, this one too.
+        if (state && before && before[frameId]?.doc !== doc) void verifyAll(tabId);
       });
     },
 
     check(tabId) {
-      return enqueue(tabId, async () => {
-        const frames = await load(tabId);
-        const next = await dropGone(frames, (id, doc) => holds(tabId, id, doc));
-        if (next !== frames) await store(tabId, next);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const waited = new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, CHECK_WAIT_MS);
       });
+      return Promise.race([verifyAll(tabId), waited])
+        .catch(() => {})
+        .finally(() => clearTimeout(timer));
     },
 
     forget(tabId) {

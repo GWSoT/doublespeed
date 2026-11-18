@@ -9,14 +9,21 @@ import { resolve } from 'node:path';
 
 const EXTENSION = resolve(import.meta.dirname, '../../.output/chrome-mv3');
 
-export const test = base.extend<{ context: BrowserContext; storage: ExtensionStorage }>({
-  context: async ({}, use) => {
+export const test = base.extend<{ bfcache: boolean; context: BrowserContext; storage: ExtensionStorage }>({
+  /**
+   * Keep the browser's back/forward cache on, which Playwright turns off. The fixture server
+   * only lets pages into it when they're asked for with `?bfcache`.
+   */
+  bfcache: [false, { option: true }],
+
+  context: async ({ bfcache }, use) => {
     if (!existsSync(resolve(EXTENSION, 'manifest.json'))) {
       throw new Error(`No build at ${EXTENSION}. Run \`npm run build\` (or \`make e2e\`).`);
     }
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
       args: [`--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`],
+      ignoreDefaultArgs: bfcache ? ['--disable-back-forward-cache'] : [],
     });
     await use(context);
     await context.close();

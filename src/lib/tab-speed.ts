@@ -85,28 +85,6 @@ export function applyReport(frames: TabFrames, frameId: number, doc: string, sta
   return rest;
 }
 
-/**
- * `frames` without the stale reports: those whose frame no longer holds the document that sent
- * them. A document withdraws its report on `pagehide`, but that message can go missing: it does
- * when the tab moves to a browser page, where nothing runs to replace it (issue #26).
- *
- * `holds` asks a frame whether it still holds a document; a frame it can't get an answer from is
- * kept. `skip` is a frame not to ask. Returns `frames` itself when every report stays.
- */
-export async function dropGone(
-  frames: TabFrames,
-  holds: (frameId: number, doc: string) => Promise<boolean>,
-  skip?: number,
-): Promise<TabFrames> {
-  const asked = Object.keys(frames).filter((key) => Number(key) !== skip);
-  const answers = await Promise.all(
-    asked.map((key) => holds(Number(key), frames[key]!.doc).catch(() => true)),
-  );
-  const gone = new Set(asked.filter((_, i) => !answers[i]));
-  if (!gone.size) return frames;
-  return Object.fromEntries(Object.entries(frames).filter(([key]) => !gone.has(key)));
-}
-
 export function tabSpeed(frames: TabFrames): TabSpeed {
   const ordered = Object.keys(frames)
     .sort((a, b) => Number(a) - Number(b))

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   applyReport,
   badgeText,
-  dropGone,
   isCheckTabMessage,
   isFrameDocQuery,
   isFrameStateMessage,
@@ -58,50 +57,6 @@ describe('applyReport', () => {
     let frames = applyReport({}, 0, 'old', withVideo(video(2, true, 1)));
     frames = applyReport(frames, 0, 'new', withVideo(video(3, true, 2)));
     expect(applyReport(frames, 0, 'old', null)).toBe(frames);
-  });
-});
-
-describe('dropGone', () => {
-  const report = (doc: string, off = false) => ({ doc, off, video: off ? null : video(2, false, 0) });
-  /** Frames as they are now: each frame id and the document it holds; any other frame is gone. */
-  const holding =
-    (now: Record<number, string>) =>
-    async (frameId: number, doc: string): Promise<boolean> =>
-      now[frameId] === doc;
-
-  it('drops the reports whose frame holds another document, or none', async () => {
-    const frames: TabFrames = { 0: report('old-top', true), 4: report('ad'), 9: report('player') };
-    expect(await dropGone(frames, holding({ 0: 'new-top', 9: 'player' }))).toEqual({ 9: report('player') });
-  });
-
-  it('gives back the same frames when every one still holds its document', async () => {
-    const frames: TabFrames = { 0: report('a'), 3: report('b') };
-    expect(await dropGone(frames, holding({ 0: 'a', 3: 'b' }))).toBe(frames);
-  });
-
-  it('doesn’t ask the frame it’s told to skip', async () => {
-    const asked: number[] = [];
-    const frames: TabFrames = { 0: report('a'), 5: report('b') };
-    const kept = await dropGone(
-      frames,
-      async (frameId) => {
-        asked.push(frameId);
-        return false;
-      },
-      5,
-    );
-    expect(asked).toEqual([0]);
-    expect(kept).toEqual({ 5: report('b') });
-  });
-
-  it('keeps a report when its frame can’t be asked', async () => {
-    const frames: TabFrames = { 0: report('a') };
-    expect(await dropGone(frames, () => Promise.reject(new Error('busy')))).toBe(frames);
-  });
-
-  it('nothing to ask in an empty tab', async () => {
-    const frames: TabFrames = {};
-    expect(await dropGone(frames, () => Promise.reject(new Error('not asked')))).toBe(frames);
   });
 });
 

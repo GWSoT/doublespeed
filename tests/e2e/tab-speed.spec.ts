@@ -4,10 +4,12 @@
  * disabled site, and nothing without a video. `localhost` is the page site; cross-origin
  * frames come from `127.0.0.1`.
  */
-import type { Frame, Page } from '@playwright/test';
+import type { BrowserContext, Frame, Page } from '@playwright/test';
 import { badge, expect, frameByUrl, openPopup, pressShortcut, tabReports, test } from './extension';
 
 const DEFAULT = 2;
+
+const reportCount = async (context: BrowserContext, page: Page) => Object.keys(await tabReports(context, page)).length;
 
 const rateOf = (target: Page | Frame) =>
   target.evaluate(() => document.querySelector<HTMLVideoElement>('#v')!.playbackRate);
@@ -115,18 +117,21 @@ test.describe('the badge', () => {
 
   test('keeps every live frame’s report when a new frame reports', async ({ context, page }) => {
     await page.goto('/iframes.html');
-    await expect.poll(async () => Object.keys(await tabReports(context, page)).length).toBe(6);
+    await expect.poll(() => reportCount(context, page)).toBe(6);
     const before = Object.keys(await tabReports(context, page));
 
-    // The new frame's first report makes the background ask the others which document they
-    // hold, before it adds the report: seven means none of the six was dropped.
+    // The new frame's first report makes the background ask every frame which document it
+    // holds, and so does the popup, which waits for the answers: none of the seven goes.
     await page.evaluate(() => {
       const frame = document.createElement('iframe');
       frame.src = '/plain.html';
       document.body.append(frame);
     });
-    await expect.poll(async () => Object.keys(await tabReports(context, page)).length).toBe(7);
+    await expect.poll(() => reportCount(context, page)).toBe(7);
+    const popup = await openPopup(context, page);
+    await expect(popup.getByRole('group', { name: 'This tab' }).locator('output')).toHaveText('2×');
     expect(Object.keys(await tabReports(context, page))).toEqual(expect.arrayContaining(before));
+    expect(await reportCount(context, page)).toBe(7);
   });
 
   test('follows the video playing, in whichever frame it is', async ({ context, page }) => {
@@ -197,16 +202,22 @@ test.describe("the popup's −/+ for this tab", () => {
     await expect.poll(() => badge(context, page)).toBe('2×');
 
     await page.goto('chrome://version');
-    let popup = await openPopup(context, page);
+    const popup = await openPopup(context, page);
     await expect(popup.locator('#site-note')).toHaveText("Browsers don't let extensions run on their own pages.");
     await expect(shown(popup)).toHaveText('No video');
     await expect(faster(popup)).toBeDisabled();
     await expect(slower(popup)).toBeDisabled();
-    await popup.close();
+  });
 
-    // A web page without a video sends no report of its own either.
+  test('forgets the last page’s video on a page without one after a browser page', async ({ context, page }) => {
+    // Issue #26, step 4: the web page sends no report of its own, so nothing replaces the
+    // leftover one before the popup opens.
+    await page.goto('/plain.html');
+    await expect.poll(() => badge(context, page)).toBe('2×');
+
+    await page.goto('chrome://version');
     await page.goto('/empty.html');
-    popup = await openPopup(context, page);
+    const popup = await openPopup(context, page);
     await expect(popup.getByRole('heading', { name: 'localhost' })).toBeVisible();
     await expect(shown(popup)).toHaveText('No video');
   });
@@ -224,5 +235,76 @@ test.describe("the popup's −/+ for this tab", () => {
     popup = await openPopup(context, page);
     await expect(shown(popup)).toHaveText('Off');
     await expect(faster(popup)).toBeDisabled();
+  });
+});
+
+test.describe('a frame too busy to answer', () => {
+  test('keeps its report, and holds up neither the other frames nor the popup', async ({ context, page }) => {
+    await page.goto('/plain.html');
+    await expect.poll(() => badge(context, page)).toBe('2×');
+
+    // The top frame's main thread is blocked for 4 s. Meanwhile six cross-origin frames, in a
+    // process of their own, report, and each report has the background ask the top frame.
+    const started = Date.now();
+    await page.evaluate(() => {
+      for (let i = 0; i < 6; i++) {
+        const frame = document.createElement('iframe');
+        frame.src = `http://127.0.0.1:3211/plain.html?${i}`;
+        document.body.append(frame);
+      }
+      setTimeout(() => {
+        const end = Date.now() + 4000;
+        while (Date.now() < end);
+      });
+    });
+    await expect.poll(() => reportCount(context, page), { timeout: 2_500 }).toBe(7);
+    const popup = await openPopup(context, page);
+    await expect(popup.getByRole('group', { name: 'This tab' }).locator('output')).toHaveText('2×', { timeout: 1_500 });
+    expect(Date.now() - started).toBeLessThan(4_000);
+
+    // Once the top frame answers, it's still there.
+    await page.waitForFunction(() => true, undefined, { timeout: 8_000 });
+    await expect.poll(() => tabReports(context, page)).toHaveProperty('0');
+    expect(await reportCount(context, page)).toBe(7);
+  });
+});
+
+test.describe('with the back/forward cache', () => {
+  test.use({ bfcache: true });
+  const restored = (page: Page) => page.evaluate(() => (window as unknown as { kept?: boolean }).kept === true);
+  const mark = (page: Page) => page.evaluate(() => ((window as unknown as { kept: boolean }).kept = true));
+
+  test('a page back from the cache shows its speed again', async ({ context, page }) => {
+    await page.goto('/plain.html?bfcache');
+    await expect.poll(() => badge(context, page)).toBe('2×');
+    await mark(page);
+
+    await page.goto('chrome://version');
+    // A page from the cache fires no `load`.
+    await page.goBack({ waitUntil: 'commit' });
+    expect(await restored(page)).toBe(true);
+    await expect.poll(() => badge(context, page)).toBe('2×');
+    const popup = await openPopup(context, page);
+    await expect(popup.getByRole('group', { name: 'This tab' }).locator('output')).toHaveText('2×');
+  });
+
+  test('a page in the cache doesn’t answer for the page that replaced it', async ({ context, page }) => {
+    await page.goto('/plain.html?bfcache');
+    await expect.poll(() => badge(context, page)).toBe('2×');
+    await mark(page);
+
+    // The new page's frames report, and the popup asks frame 0, which the cached page also had.
+    await page.goto('/iframes.html?bfcache');
+    await expect.poll(() => reportCount(context, page)).toBe(6);
+    const popup = await openPopup(context, page);
+    await expect(popup.getByRole('group', { name: 'This tab' }).locator('output')).toHaveText('2×');
+    expect(await tabReports(context, page)).toHaveProperty('0');
+    expect(await reportCount(context, page)).toBe(6);
+    await popup.close();
+
+    // The first page was in the cache all along.
+    // A page from the cache fires no `load`.
+    await page.goBack({ waitUntil: 'commit' });
+    expect(await restored(page)).toBe(true);
   });
 });
