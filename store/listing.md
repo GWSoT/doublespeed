@@ -399,9 +399,8 @@ pages disagree:
 - [User Data FAQ][faq-prominent], 10: "The prominent disclosure and consent must occur within the
   Product's user interface. Disclosures in the Chrome Web Store description or inline installation
   page do not satisfy this requirement." That answer is on the live FAQ beside answer 3 on locally
-  handled data, which is new with the 2026 change, so it can't be read as superseded, though its
-  wording is the old policy's too. It doesn't fit the policy's own words: a screen in the
-  product's interface can only show after installation.
+  handled data, which is new with the 2026 change, so it can't be read as superseded. It doesn't
+  fit the policy's own words: a screen in the product's interface can only show after installation.
 
 Doublespeed handles user data in Google's sense whether or not the boxes are ticked; ticking them
 makes that visible to a reviewer, who may go by answer 10. It has no screen of its own (ADR-0005:
@@ -462,9 +461,10 @@ Only the owner can do or decide these.
 - **`PRIVACY.md`, with 1.0.0:** the new policy (with SPEC §6 and ADR-0006's amendment) is on the
   `privacy-1-0-0` branch. Uploading and publishing are separate: while 1.0.0 is in review, the
   published item keeps its old form. So:
-  1. Before the upload, add a line to the README, the listing's homepage, linking the branch's
-     file as the policy from 1.0.0, so the Limited Use statement is one click from the homepage
-     during the review. Main's `PRIVACY.md`, 0.1.1's policy URL, stays as it is.
+  1. Before the upload, add a line to main's README, which the listing's homepage shows, linking
+     the branch's file as the policy from 1.0.0, so the Limited Use statement is one click from
+     the homepage during the review. Main's `PRIVACY.md`, which 0.1.1's policy URL points to,
+     stays as it is.
   2. Give 1.0.0's draft the branch's file as its policy URL
      ([Privacy tab](#privacy-tab)).
   3. When 1.0.0 is published, merge the branch, after rebasing it onto main
