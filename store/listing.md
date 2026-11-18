@@ -76,10 +76,10 @@ Doublespeed controls the playback speed of videos on web pages. It sets videos t
 ([Data usage](#data-usage) says why). Tick all three certifications (no selling or transfer, no
 use unrelated to the single purpose, no use for credit decisions).
 
-**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. From the
-day 1.0.0 is uploaded it names the two data types and carries the Limited Use statement
-([Limited Use](#limited-use)); until then it keeps the text 0.1.1 went to review with
-([Still open](#still-open)).
+**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. That is the URL
+once 1.0.0 is published. For 1.0.0's draft, use the `privacy-1-0-0` branch's file, which names the
+two data types and carries the Limited Use statement ([Limited Use](#limited-use)); main's keeps
+the text 0.1.1 went to review with until then ([Still open](#still-open)).
 
 ### Distribution tab
 
@@ -260,7 +260,7 @@ above are the description's.
 | "Embedded players, and ones without such a menu, work too." | The content script runs in every frame, `about:blank` ones included (`content.ts:11–15`), and every frame follows the page site (`src/content/frame-settings.ts:59–61`, `entrypoints/background.ts:24`). Rule 1 doesn't depend on the player. Real sites: a blog's YouTube embed passed the Phase 1 check. | With Chrome's site access set to specific sites, a frame from another site gets no content script; the claim assumes the access Doublespeed asks for. |
 | "set a speed with the shortcuts and Doublespeed keeps to it until the next video … A pick in the player's own menu is kept the same way, when the player applies it within a second of your click or key press." | Rule 3: a `ratechange` within 1 s of a trusted click or key press in the video's frame, made after the default was applied, becomes the override (`speed-rules.ts:184–191`), and a player's own menu is in the video's frame. Shortcuts: rule 5 (`speed-rules.ts:146–157`). The override is the target speed until the source changes (SPEC §3.1). | An embedding page's own speed controls outside the player's frame: the click is in the parent frame, which rule 3 doesn't see, so the change counts as a site reset (SPEC §3.2, rules 3–4). Hence "the player's own menu". And a menu that doesn't know the speed Doublespeed set: YouTube's steps from the speed YouTube believes it's at (1×), so at 2× choosing Normal there changes nothing and `>` gives 1.25× (real-Chrome check, 2026-11-16; it comes with staying in the isolated world, ROADMAP Phase 1's decision table). Doublespeed keeps to whatever speed the menu does set, which is all the bullet says, and the shortcuts come first in it because Alt+R gives 1× everywhere. A pick the player applies more than a second after the click counts as a site reset and is undone, hence "within a second". After Doublespeed has left a site alone (rule 4), a menu pick still plays but isn't recorded as an override (`speed-rules.ts:170`); nothing undoes it before the next video. |
 | "the next video, which starts at your default again" | A new source starts rule 1 over (`speed-rules.ts:104–109`). | |
-| "if one changes it when you haven't just clicked or pressed a key, Doublespeed sets it back" | Rule 4 re-sets the target speed (`speed-rules.ts:193–198`). | A change within a second of a click or key press in that frame counts as the user's (rule 3), even when the player made it. Hence "not right after". |
+| "if one changes it when you haven't just clicked or pressed a key, Doublespeed sets it back" | Rule 4 re-sets the target speed (`speed-rules.ts:193–198`). | A change within a second of a click or key press in that frame counts as the user's (rule 3), even when the player made it, and it replaces an override a shortcut set before it. Hence "when you haven't just clicked or pressed a key", which qualifies "keeps to it" in the bullet above too. |
 | "A site that keeps at it (more than five times in ten seconds) is left alone until the next video, or until you use a shortcut." | `RESET_LIMIT` 5 and `RESET_WINDOW_MS` 10 s (`speed-rules.ts:15–16`, `:197`); a new source starts over; rule 5 takes a source back from the site (`speed-rules.ts:154`). | |
 | "Alt+. faster and Alt+, slower, in 0.25× steps. Alt+R goes to 1×, and from 1× back to your default." | The commands in `wxt.config.ts`; `stepSpeed` moves to the next 0.25 step within 0.25×–4× (`src/lib/speed.ts`); `commandedSpeed` (`src/lib/speed-commands.ts`). | They do nothing on a disabled site or to live videos (rule 5); the text doesn't say they do. |
 | "Change them at chrome://extensions/shortcuts" (Chrome); "open about:addons, click the gear button, and choose Manage Extension Shortcuts" (AMO) | Chrome's page. Firefox, checked 2026-11-18 on 128.14 ESR and 160.0: about:addons' gear button ("Tools for all add-ons") has "Manage Extension Shortcuts"; the options page shows those steps on 128 (`optionsShortcutsSteps`) and a "Change shortcuts" button on 160, which has `commands.openShortcutSettings()` (`entrypoints/options/App.svelte:38–42`). | |
@@ -278,7 +278,8 @@ above are the description's.
 **Decision:** tick **Web history** and **User activity**. Leave **Website content** and the other
 six unticked.
 
-**Why anything is ticked.** Doublespeed handles user data only on the device, and Google's rules
+**Why anything is ticked.** Doublespeed makes no network requests itself, so it handles user data on the device (the browser's
+sync copies the settings, if it's on), and Google's rules
 count that:
 
 - [User Data FAQ][faq-local], 3: "Extensions are required to disclose how they handle user data,
@@ -338,8 +339,8 @@ not quoted):
   never decodes. How Google classes that is unverified; look at this box again before pasting.
 
 **What follows from it:** "collects nothing" is gone from 1.0.0's description and from the README.
-`PRIVACY.md`, SPEC §6 and ADR-0006 (a dated amendment; ADRs keep their decided text) change on the
-day 1.0.0 is uploaded, not before: the policy URL of 0.1.1, in review now, is `PRIVACY.md` on main,
+`PRIVACY.md`, SPEC §6 and ADR-0006 (a dated amendment; ADRs keep their decided text) change when
+1.0.0 is published, not before: the policy URL of 0.1.1, in review now, is `PRIVACY.md` on main,
 and a policy naming two data types beside a form with no box ticked is the discrepancy the FAQ
 quoted above warns of. Their text is ready on the `privacy-1-0-0` branch
 ([Still open](#still-open)). 0.1.1 itself already handles both data types with neither declared;
@@ -352,7 +353,7 @@ that mismatch stands until 1.0.0's form replaces it.
 
 ### Limited Use
 
-`PRIVACY.md` must carry the statement, and its upload-day version does:
+`PRIVACY.md` must carry the statement, and the `privacy-1-0-0` version does:
 
 - [Program Policies, Limited Use][cws-limited]: "An affirmative statement that your use of the data
   complies with the Limited Use restrictions must be disclosed on a website belonging to your
@@ -367,7 +368,7 @@ that mismatch stands until 1.0.0's form replaces it.
 
 The homepage is the repository, whose README links `PRIVACY.md`: one click away. The statement
 says the data is used only to control the speed of videos, never sent anywhere by Doublespeed, and
-not sold, transferred to third parties, seen by anyone but the user, or used for advertising or
+not sold, transferred to third parties, seen by anyone on the developer's side, or used for advertising or
 credit decisions: the four elements the FAQ lists (allowed use, allowed transfer, prohibited advertising,
 prohibited human interaction).
 
@@ -387,7 +388,10 @@ pages disagree:
 
 - [Troubleshooting, "User data policy - prominent disclosure"][cws-nickel] (notification Purple
   Nickel): "Prominent disclosure of data collection in the extension's Chrome Web Store listing is
-  sufficient."
+  sufficient." But that page predates the 2026 change: its "Relevant policy" block still quotes
+  "prior to the collection", and it still allows undisclosed collection that is "consistent with
+  the extension's single purpose", the exception the announcement removed. It is the older of the
+  two pages.
 - [User Data FAQ][faq-prominent], 10: "The prominent disclosure and consent must occur within the
   Product's user interface. Disclosures in the Chrome Web Store description or inline installation
   page do not satisfy this requirement." That answer is on the live FAQ beside answer 3 on locally
@@ -396,8 +400,9 @@ pages disagree:
 
 Doublespeed handles user data in Google's sense whether or not the boxes are ticked; ticking them
 makes that visible to a reviewer, who may go by answer 10. It has no screen of its own (ADR-0005:
-no welcome tab), and the content script starts noting the input time as soon as a page loads
-(`entrypoints/content.ts:16`), before any of its interface shows. Going to review like that is a
+no welcome tab), and the content script starts noting the input time
+from `document_start`, before the page's own scripts (`entrypoints/content.ts:18`) and before any
+of its interface shows. Going to review like that is a
 known risk, for the owner to accept or not: [Still open](#still-open).
 
 [cws-nickel]: https://developer.chrome.com/docs/webstore/troubleshooting#udp-prominent-disclosure
@@ -446,8 +451,16 @@ Only the owner can do or decide these.
 
 - **Private windows on Firefox, before the AMO submission:**
   [#32](https://github.com/GWSoT/doublespeed/issues/32).
-- **`PRIVACY.md`, on the day 1.0.0 is uploaded:** merge the `privacy-1-0-0` branch (the new
-  `PRIVACY.md`, SPEC §6 and ADR-0006's amendment), so the policy and the form change together
+- **The order of the release:** settle #32 first, since either fix changes a package; then bump the
+  version to 1.0.0 and build once, so both stores get the same commit; upload to Chrome; submit to
+  AMO no earlier than the `PRIVACY.md` merge below, since AMO's description links it. Or say that
+  Firefox ships later, as 1.0.1.
+- **`PRIVACY.md`, with 1.0.0:** the new policy (with SPEC §6 and ADR-0006's amendment) is on the
+  `privacy-1-0-0` branch. Uploading and publishing are separate: while 1.0.0 is in review, the
+  published item keeps its old form. So give 1.0.0's draft the branch's file as its policy URL,
+  `https://github.com/GWSoT/doublespeed/blob/privacy-1-0-0/PRIVACY.md`, and when 1.0.0 is
+  published, merge the branch and set the URL back to main's. Rebase it onto main first
+  (`git rebase --onto main 34bfad8 privacy-1-0-0`), since main is squash-merged
   ([Data usage](#data-usage)).
 - **In the Chrome dashboard, once 0.1.1's review ends:** upload 1.0.0, paste the text above, tick
   **Web history** and **User activity**, and check that the form's definitions still read as noted
@@ -460,7 +473,9 @@ Only the owner can do or decide these.
   (a welcome tab or a first-run popup panel)? Google's troubleshooting page says disclosure in the
   listing is sufficient, and FAQ 10, still live, says it isn't
   ([Disclosure before installation](#disclosure-before-installation)). Recommended: go to review
-  without one. Nothing leaves the browser, and a screen would undo ADR-0005. The risk to accept: a
+  without one. Doublespeed sends nothing anywhere, and a screen would undo ADR-0005. The only
+  current support for "the listing is enough" is the policy's own "prior to installation"; the
+  troubleshooting page that says so outright is the older text. The risk to accept: a
   reviewer who goes by FAQ 10 can reject 1.0.0 for it, which would be this publisher's second
   policy rejection, and the Program Policies' Repeat Abuse section says "Serious or repeated
   violations … will result in the suspension of your developer account". If a review asks for a

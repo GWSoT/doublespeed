@@ -27,8 +27,8 @@ make zip         # store-ready zips in .output/
 
 Without make, `npm ci` and then `npm run build:firefox` build the Firefox add-on into
 `.output/firefox-mv3/` (`npm run build` for Chrome, into `.output/chrome-mv3/`). Those two commands
-are all a build from the source package needs; they were checked on Linux ARM64 in Docker's `node:24.14.0-slim` image (Debian) with Node
-24.14.0 and npm 11.9.0, and on macOS with Node 24.
+are all a build from the source package needs; they were checked on Linux ARM64 in Docker's
+`node:24.14.0-slim` image (Debian) with Node 24.14.0 and npm 11.9.0, and on macOS with Node 24.
 
 To try a build by hand: load `.output/chrome-mv3` from `chrome://extensions` (Developer mode →
 Load unpacked), or `.output/firefox-mv3/manifest.json` from `about:debugging` → This Firefox →
