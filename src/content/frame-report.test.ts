@@ -125,6 +125,22 @@ describe('reportFrame', () => {
     expect(ask()).toBe(sent[1]!.doc);
   });
 
+  it('hears pagehide and pageshow even when a page script stops them', async () => {
+    const frame = start(null);
+    frame.set(VIDEO);
+    await tick();
+    // The page's own listeners come later than the reporter's, which is created at document_start.
+    for (const type of ['pagehide', 'pageshow']) {
+      frame.win.addEventListener(type, (event) => event.stopImmediatePropagation(), true);
+    }
+
+    frame.win.dispatchEvent(new Event('pagehide'));
+    expect(sent[1]).toEqual({ type: 'frameState', doc: sent[0]!.doc, state: null });
+    frame.win.dispatchEvent(pageshow(true));
+    await tick();
+    expect(sent[2]).toEqual({ type: 'frameState', doc: expect.any(String), state: VIDEO });
+  });
+
   it('sends nothing while the page is prerendered, and its report once it’s shown', async () => {
     const frame = start(VIDEO, { prerendering: true });
     frame.reporter.changed();

@@ -71,20 +71,28 @@ export function createTabBadges(): TabBadges {
     return parseTabFrames((await browser.storage.session.get(key))[key]);
   }
 
-  /** Applies one frame's report, or its withdrawal (`null`), and shows the result. */
-  function apply(tabId: number, frameId: number, doc: string, state: FrameState | null): Promise<TabFrames | null> {
-    let before: TabFrames | null = null;
+  /**
+   * Applies one frame's report, or its withdrawal (`null`), and shows the result. `changed` runs
+   * in the same turn of the queue, with the reports as they were, when something changed.
+   */
+  function apply(
+    tabId: number,
+    frameId: number,
+    doc: string,
+    state: FrameState | null,
+    changed?: (before: TabFrames) => void,
+  ): Promise<void> {
     return enqueue(tabId, async () => {
       const frames = await load(tabId);
       const next = applyReport(frames, frameId, doc, state);
       if (next === frames) return;
-      before = frames;
       cache.set(tabId, next);
       const key = tabKey(tabId);
       if (Object.keys(next).length) await browser.storage.session.set({ [key]: next });
       else await browser.storage.session.remove(key);
       await show(tabId, next);
-    }).then(() => before);
+      changed?.(frames);
+    });
   }
 
   async function show(tabId: number, frames: TabFrames): Promise<void> {
@@ -111,17 +119,18 @@ export function createTabBadges(): TabBadges {
   }
 
   /**
-   * `verify` for every report in the tab. It starts on the next task, so the reports of a burst
-   * share one check, and asks afresh when it starts: no answer given before a check was asked
-   * for counts for it. Resolves once every frame has answered.
+   * `verify` for every report in the tab. It reads the tab's reports on the next task, once the
+   * reports already queued are in, and requests made until then share it: so the reports of a
+   * burst share a check or two. It asks every frame afresh once it has read them, so no answer
+   * given before a request counts for it. Resolves once every frame has answered.
    */
   function checkTab(tabId: number): Promise<void> {
     const pending = nextCheck.get(tabId);
     if (pending) return pending;
     const run = new Promise<void>((resolve) => setTimeout(resolve)).then(async () => {
-      nextCheck.delete(tabId);
       let frames: TabFrames = {};
       await enqueue(tabId, async () => {
+        nextCheck.delete(tabId);
         frames = await load(tabId);
       });
       await Promise.all(Object.entries(frames).map(([frameId, frame]) => verify(tabId, Number(frameId), frame.doc)));
@@ -132,13 +141,14 @@ export function createTabBadges(): TabBadges {
 
   return {
     report(tabId, frameId, doc, state) {
-      void apply(tabId, frameId, doc, state).then((before) => {
+      void apply(tabId, frameId, doc, state, (before) => {
         // A report the tab didn't hold for this document (a new page, or a frame reporting
         // again), or a withdrawal. Either can come from a page that replaced, or is leaving,
         // documents whose withdrawals never arrive: the frames of a page that left for a browser
         // page withdraw after the move, while its top frame can't. So every frame is asked, the
-        // reporter too, since it may be gone already.
-        if (before && (!state || before[frameId]?.doc !== doc)) void checkTab(tabId);
+        // reporter too, since it may be gone already. Asked for from inside the queue, so the
+        // reports queued behind this one share the check.
+        if (!state || before[frameId]?.doc !== doc) void checkTab(tabId);
       });
     },
 

@@ -5,7 +5,8 @@
  * - Sends only when the report changes, and nothing from a frame that never had anything to
  *   show, so pages without videos never wake the background.
  * - Leaving the page (`pagehide`) withdraws the report. Coming back from the back/forward cache
- *   (`pageshow`) sends it again.
+ *   (`pageshow`) sends it again. Both are listened to in the capture phase, from document_start,
+ *   so a page script can't stop them reaching this frame's reporter.
  * - A page the browser prerenders reports only once it's shown (`prerenderingchange`): until
  *   then it isn't the page in the tab, and Chrome gives its top frame another `frameId`.
  * - Reports carry an id for this document, so the background can tell a late withdrawal from
@@ -70,7 +71,7 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal, 
   browser.runtime.onMessage.addListener(answer);
   signal.addEventListener('abort', () => browser.runtime.onMessage.removeListener(answer), { once: true });
 
-  const listen = { signal };
+  const listen = { capture: true, signal };
   win.addEventListener(
     'pagehide',
     () => {

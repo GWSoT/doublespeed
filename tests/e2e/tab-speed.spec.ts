@@ -310,6 +310,36 @@ test.describe('with the back/forward cache', () => {
     await expect(popup.getByRole('group', { name: 'This tab' }).locator('output')).toHaveText('2×');
   });
 
+  for (const stop of [['pageshow'], ['pagehide', 'pageshow']]) {
+    test(`a page that stops ${stop.join(' and ')} still shows its speed back from the cache`, async ({ context, page }) => {
+      await page.goto(`/stops-lifecycle.html?bfcache&${stop.map((type) => `stop=${type}`).join('&')}`);
+      await expect.poll(() => badge(context, page)).toBe('2×');
+      await mark(page);
+
+      await page.goto('chrome://version');
+      await page.goBack({ waitUntil: 'commit' });
+      expect(await restored(page)).toBe(true);
+      await expect.poll(() => badge(context, page)).toBe('2×');
+      const popup = await openPopup(context, page);
+      await expect(thisTab(popup)).toHaveText('2×');
+    });
+  }
+
+  test('a page whose iframes report comes back from the cache with every report', async ({ context, page }) => {
+    await page.goto('/iframes.html?bfcache');
+    await expect.poll(() => reportCount(context, page)).toBe(6);
+    await mark(page);
+
+    await page.goto('/empty.html?bfcache');
+    await page.goBack({ waitUntil: 'commit' });
+    expect(await restored(page)).toBe(true);
+    // Every frame reports again under a new id, and answers the popup's check with it.
+    await expect.poll(() => reportCount(context, page)).toBe(6);
+    const popup = await openPopup(context, page);
+    await expect(thisTab(popup)).toHaveText('2×');
+    expect(await reportCount(context, page)).toBe(6);
+  });
+
   test('a page in the cache doesn’t answer for the page that replaced it', async ({ context, page }) => {
     await page.goto('/plain.html?bfcache');
     await expect.poll(() => badge(context, page)).toBe('2×');

@@ -15,8 +15,11 @@ interface Busy {
  * The extension API as the background uses it: `storage.session`, the badge, and the tab's
  * frames, each holding a document (or busy, or gone). A frame not in `frames` doesn't answer.
  */
-function fakeBrowser() {
+function fakeBrowser({ storageMs = 0 } = {}) {
   const session = new Map<string, unknown>();
+  /** Storage and the badge answer after a task or `storageMs`, as the browser's do; at once by default. */
+  const later = <T>(value: T): Promise<T> =>
+    storageMs ? new Promise((resolve) => setTimeout(() => resolve(value), storageMs)) : Promise.resolve(value);
   const badge = new Map<number, string>();
   const frames = new Map<number, string | Busy>();
   const asked: number[] = [];
@@ -25,16 +28,17 @@ function fakeBrowser() {
   vi.stubGlobal('browser', {
     storage: {
       session: {
-        get: async (key: string) => (session.has(key) ? { [key]: structuredClone(session.get(key)) } : {}),
-        set: async (items: Record<string, unknown>) => {
+        get: (key: string) => later(session.has(key) ? { [key]: structuredClone(session.get(key)) } : {}),
+        set: (items: Record<string, unknown>) => {
           for (const [key, value] of Object.entries(items)) session.set(key, structuredClone(value));
+          return later(undefined);
         },
-        remove: async (key: string) => void session.delete(key),
+        remove: (key: string) => later(void session.delete(key)),
       },
     },
     action: {
-      setBadgeText: async ({ tabId, text }: { tabId: number; text: string }) => void badge.set(tabId, text),
-      setBadgeBackgroundColor: async () => {},
+      setBadgeText: ({ tabId, text }: { tabId: number; text: string }) => later(void badge.set(tabId, text)),
+      setBadgeBackgroundColor: () => later(undefined),
     },
     i18n: { getMessage: (name: string, subs?: string[]) => (name === 'badgeOff' ? 'off' : `${subs?.[0]}×`) },
     tabs: {
@@ -151,6 +155,17 @@ describe('a withdrawal', () => {
     expect(fake.badge()).toBe('');
   });
 
+  it('asks nothing when it removes nothing', async () => {
+    fake.frames.set(0, 'top');
+    badges.report(TAB, 0, 'top', at(2));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0]));
+
+    badges.report(TAB, 4, 'never-reported', null);
+    await settle();
+    await settle();
+    expect(fake.asked).toEqual([0]);
+  });
+
   it('keeps the reports of frames still there', async () => {
     fake.frames.set(0, 'top').set(4, 'player');
     badges.report(TAB, 0, 'top', at(2));
@@ -203,7 +218,7 @@ describe('a busy frame', () => {
     expect(fake.badge()).toBe('2×');
   });
 
-  it('is asked once for a burst of reports, which share one check', async () => {
+  it('is asked once for a burst of reports, which share a check', async () => {
     fake.frames.set(0, 'top');
     badges.report(TAB, 0, 'top', at(2));
     await vi.waitFor(() => expect(fake.asked).toEqual([0]));
@@ -224,6 +239,20 @@ describe('a busy frame', () => {
 });
 
 describe('a check', () => {
+  it('is shared by a burst of reports, even when storage takes a while', async () => {
+    fake = fakeBrowser({ storageMs: 15 });
+    badges = createTabBadges();
+    const frameIds = [0, 4, 5, 6, 7, 8];
+    for (const frameId of frameIds) {
+      fake.frames.set(frameId, `doc-${frameId}`);
+      badges.report(TAB, frameId, `doc-${frameId}`, at(2));
+    }
+    await vi.waitFor(() => expect(fake.asked).toHaveLength(frameIds.length));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect([...fake.asked].sort((a, b) => a - b)).toEqual(frameIds);
+    expect(Object.keys(fake.stored())).toHaveLength(frameIds.length);
+  });
+
   it('asks afresh, so an answer given before the tab moved on doesn’t count for it', async () => {
     fake.frames.set(0, 'top').set(4, 'player');
     badges.report(TAB, 0, 'top', at(2));

@@ -5,6 +5,7 @@ import { createSpeedLabels } from '../src/content/speed-label';
 import { trackUserInput } from '../src/content/user-input';
 import { watchForVideos } from '../src/content/video-finder';
 import { isSpeedCommandMessage } from '../src/lib/speed-commands';
+import type { FrameState } from '../src/lib/tab-speed';
 
 // Every frame of every page, before page scripts run (SPEC §5, ADR-0003).
 export default defineContentScript({
@@ -15,20 +16,23 @@ export default defineContentScript({
   async main(ctx) {
     // Input is tracked from document_start, before any page script can hide it.
     const lastInputAt = trackUserInput(window, ctx.signal);
+    // So is the page's lifecycle, for the tab's speed: the badge and the popup. What the frame
+    // reports is filled in once the settings are read.
+    let readFrame = (): FrameState | null => null;
+    const reporter = reportFrame(() => readFrame(), ctx.signal);
 
     let onSettings = (_next: EngineSettings) => {};
     const settings = await watchFrameSettings((next) => onSettings(next), ctx.signal);
     if (ctx.isInvalid) return;
 
-    // The tab's speed, for the badge and the popup: this frame's video, or, from the top frame
-    // only, that the page site is disabled.
+    // This frame's video, or, from the top frame only, that the page site is disabled.
     const isTop = window.top === window;
     let enabled = settings.enabled;
-    const reporter = reportFrame(() => {
+    readFrame = () => {
       if (isTop && !enabled) return { off: true, video: null };
       const video = engine.frameVideo();
       return video ? { off: false, video } : null;
-    }, ctx.signal);
+    };
 
     const engine = createSpeedEngine({ ...settings, lastInputAt, onChange: reporter.changed, signal: ctx.signal });
     let finding = false;
