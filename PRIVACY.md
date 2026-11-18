@@ -41,16 +41,17 @@ Uninstalling Doublespeed removes what it keeps in that browser.
 
 ## In the stores' terms
 
-The Chrome Web Store counts data an extension handles on your device too, so on the store's privacy
-form Doublespeed declares **web history** (the page and video addresses above, and the sites in
-your site list) and **user activity** (the time of your last click or key press). It declares no
-website content, since it reads none.
+The Chrome Web Store counts data an extension handles on your device too. In its terms, what
+Doublespeed reads is **web history** (the page and video addresses above, and the sites in your
+site list) and **user activity** (the time of your last click or key press), and from version
+1.0.0 its form on the store declares both. It reads no website content.
 
 Doublespeed's use of this data complies with the
 [Chrome Web Store User Data Policy](https://developer.chrome.com/docs/webstore/program-policies/policies#protecting_user_privacy),
 including the Limited Use requirements. It uses the data only to control the speed of videos, as
-described here. It never sends the data anywhere itself: its developer never receives it, and
-Doublespeed doesn't sell it, transfer it, or use it for advertising or credit decisions.
+described here. It never sends the data anywhere itself: its developer never receives it, no
+person reads it, and Doublespeed doesn't sell it, transfer it to third parties, or use it for
+advertising or credit decisions.
 
 On Firefox, the add-on declares that it collects no data, which Mozilla defines as data handled
 outside the add-on or the browser.
