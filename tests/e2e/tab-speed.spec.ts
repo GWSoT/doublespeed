@@ -263,11 +263,12 @@ test.describe("the popup's −/+ for this tab", () => {
 });
 
 test.describe('asking frames which document they hold', () => {
-  test('a page load asks each frame a few times at most', async ({ context, page }) => {
+  test('a page load asks no more than one check per new document', async ({ context, page }) => {
     // Issue #30. Each report from a new document has the background ask every frame with a
-    // report, but the reports of a burst share a check, so it comes to about one question per
-    // frame. Over-asking (about 100 questions for these ten frames, in #29's review) only showed
-    // in a browser.
+    // report so far, and the reports of a burst share a check, so it usually comes to about one
+    // question per frame. At worst the 11 reports come one by one, each with its own check:
+    // 1 + 2 + … + 11 questions. Over-asking (about 100 questions for these ten frames, in #29's
+    // review) only showed in a browser.
     const asked = await countFrameDocQuestions(context);
     await page.goto('/plain.html');
     await page.evaluate(() => {
@@ -287,7 +288,7 @@ test.describe('asking frames which document they hold', () => {
     await expect.poll(settled).toBe(true);
     const count = await asked();
     expect(count).toBeGreaterThanOrEqual(11);
-    expect(count).toBeLessThanOrEqual(3 * 11);
+    expect(count).toBeLessThanOrEqual((11 * 12) / 2);
   });
 });
 
