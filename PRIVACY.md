@@ -20,9 +20,9 @@ Uninstalling Doublespeed removes all of it.
 ## Why it runs on every site
 
 A video can be on any site and inside any frame, so Doublespeed runs on every page. There it finds
-the video elements and sets their speed, notes when you last clicked or pressed a key (see
-above), and checks the page's address against your site list. It reads nothing else from the
-page.
+the video elements and sets their speed, notes when you last clicked or pressed a key (see above),
+and checks the page's address against your site list. To tell one video from the next, it notes each
+video's source address, in the page's memory only. It reads nothing else from the page.
 
 ## Checking this
 
@@ -31,4 +31,4 @@ the add-on also declares that it collects no data. Questions go to
 [GitHub issues](https://github.com/GWSoT/doublespeed/issues). If this policy ever changes, the
 change shows in this file's history.
 
-Last updated: 2026-11-17.
+Last updated: 2026-11-18.

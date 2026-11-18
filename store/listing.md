@@ -71,7 +71,7 @@ transfer, no use unrelated to the single purpose, no use for credit decisions).
 **Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. Google
 requires one from every extension that handles user data, even only on the device
 ([User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)), and
-Doublespeed reads each page's address to check it against the site list. 0.1.0 went without one;
+Doublespeed reads each page's hostname to check it against the site list. 0.1.0 went without one;
 0.1.1 has it.
 
 ## Distribution tab
@@ -98,27 +98,31 @@ before that upload.
   - "every video on the web at 2× from the first frame" misses sites where the user withheld
     Doublespeed's access (SPEC §2.2); a custom-element player defined after load that autoplays
     with no later DOM change or click (SPEC §5's known gap); and a video that starts playing
-    before the content script has read its settings, which it does before it looks for videos
-    (`entrypoints/content.ts`).
+    before the content script has read its settings, since it reads them before it looks for
+    videos (`entrypoints/content.ts`).
   - "change a video's speed with the site's own menu … and that video keeps it" misses an
     embedding page that sets an iframe player's speed through the player's API: the click is in
-    the parent frame, which rule 3 doesn't see, so the change counts as a site reset (SPEC §3.2,
-    rules 3 and 4).
+    the parent frame, which rule 3 doesn't see, so unless the video's own frame also had a click
+    or key press in the second before, the change counts as a site reset (SPEC §3.2, rules 3
+    and 4).
   - "Doublespeed sets it back" stops once a site resets the speed of the same source more than
     ~5 times in ~10 s (SPEC §3.2, rule 4).
   - "a small label shows on the video when you change it" holds only for the shortcuts and the
     popup's "This tab" −/+, and only over videos in view (SPEC §3.2, rule 5): not for the default
     speed's −/+ or the site's own speed menu.
-- **Data usage:** decide whether to tick "Web history" and "User activity". The User Data FAQ
-  says on-device handling must be disclosed too and counts the URLs the browser visits as browsing
-  activity. The form defines web history as the list of pages the user opened, with titles and
-  visit times, and user activity as network monitoring, clicks, mouse position, scrolling or key
-  presses (checked in the dashboard 2026-11-18). Doublespeed reads each page's address,
-  to check it against the site list and, in the popup, to tell whether it can run there. In a
-  page's memory it holds the time of the last trusted click or key press (never which key or
-  where) and each video's source address, gone when the page closes. The only addresses it
-  stores are the site list's patterns: the sites it's off on, music.youtube.com included. If
-  either box is ticked, reword "collects nothing" in the description and in PRIVACY.md to match.
+- **Data usage:** decide whether to tick "Web history", "User activity" or "Website content". The
+  User Data FAQ says on-device handling must be disclosed too and counts the URLs the browser visits
+  as browsing activity. The form defines web history as the list of pages the user opened, with
+  titles and visit times; user activity as, for example, network monitoring, clicks, mouse position,
+  scrolling or key presses; and website content as, for example, text, images, sounds, videos or
+  hyperlinks (checked in the dashboard 2026-11-18). Doublespeed reads page addresses: the top
+  frame's hostname, to check it against the site list; the tab's address in the background, to give
+  its iframes the same page site; and the tab's address in the popup, to tell whether it can run
+  there. In a page's memory it holds the time of the last trusted click or key press (never which
+  key or where) and each video's source address (an internal id for a `srcObject` stream), gone when
+  the page closes. The only addresses it stores are the site list's patterns: the sites it's off on,
+  music.youtube.com included. If any of them is ticked, reword "collects nothing" in the description
+  and in PRIVACY.md to match.
 - **Test instructions:** clicking the toolbar icon opens the popup; turning the site off is the
   popup's switch. Say both steps.
 - **addons.mozilla.org:** the description's shortcut line points to
