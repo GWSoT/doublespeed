@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAnswer,
   applyReport,
   badgeText,
   isCheckTabMessage,
@@ -58,35 +57,6 @@ describe('applyReport', () => {
     let frames = applyReport({}, 0, 'old', withVideo(video(2, true, 1)));
     frames = applyReport(frames, 0, 'new', withVideo(video(3, true, 2)));
     expect(applyReport(frames, 0, 'old', null)).toBe(frames);
-  });
-});
-
-describe('applyAnswer', () => {
-  const report = (doc: string, state: FrameState | null) => ({ type: 'frameState' as const, doc, state });
-
-  it('keeps a report whose frame still holds its document', () => {
-    const frames = applyReport({}, 0, 'a', withVideo(video(2, true, 1)));
-    expect(applyAnswer(frames, 0, 'a', report('a', withVideo(video(3, true, 2))))).toBe(frames);
-  });
-
-  it('drops a report whose frame holds another document, or none', () => {
-    const frames = applyReport({}, 0, 'old', withVideo(video(2, true, 1)));
-    expect(applyAnswer(frames, 0, 'old', report('new', null))).toEqual({});
-    expect(applyAnswer(frames, 0, 'old', null)).toEqual({});
-  });
-
-  it('puts back the report of the document the frame holds, which the stale one replaced (issue #30)', () => {
-    let frames = applyReport({}, 0, 'new', withVideo(video(2, true, 2)));
-    frames = applyReport(frames, 0, 'old', withVideo(video(1, true, 1)));
-    expect(applyAnswer(frames, 0, 'old', report('new', withVideo(video(2, true, 2))))).toEqual({
-      0: { doc: 'new', off: false, video: video(2, true, 2) },
-    });
-  });
-
-  it('keeps a report that came in since it asked, over the one in the answer', () => {
-    // Asked about `old`; meanwhile `new` sent a newer report than the one it answered with.
-    const frames = applyReport({}, 0, 'new', withVideo(video(3, true, 3)));
-    expect(applyAnswer(frames, 0, 'old', report('new', withVideo(video(2, true, 2))))).toBe(frames);
   });
 });
 

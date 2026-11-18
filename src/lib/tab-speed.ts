@@ -37,8 +37,7 @@ export interface FrameStateMessage {
 
 /**
  * Asks one frame, through `tabs.sendMessage` with its `frameId`, which document it holds. The
- * frame's content script answers with that document's report as it last sent it, a
- * `FrameStateMessage` (`state` is `null` when it has sent none), or `null` once that document is
+ * frame's content script answers with the `doc` of its reports, or `null` once that document is
  * going away.
  */
 export interface FrameDocQuery {
@@ -88,26 +87,6 @@ export function applyReport(frames: TabFrames, frameId: number, doc: string, sta
   if (frames[key]?.doc !== doc) return frames;
   const { [key]: _gone, ...rest } = frames;
   return rest;
-}
-
-/**
- * `frames` after a frame, asked about its report from `doc`, answers with the document it holds
- * (`FrameDocQuery`). When that's another document, or none, the withdrawal for `doc` never
- * arrived, so its report goes; and the report of the document the frame does hold takes its
- * place, since `doc`'s may have arrived after it and replaced it. A report that came in since
- * the question, from any document, stays. The caller passes `null` for an answer that may be out
- * of date, which puts nothing back.
- */
-export function applyAnswer(
-  frames: TabFrames,
-  frameId: number,
-  doc: string,
-  answer: FrameStateMessage | null,
-): TabFrames {
-  if (answer?.doc === doc) return frames;
-  const without = applyReport(frames, frameId, doc, null);
-  if (without === frames || !answer?.state) return without;
-  return applyReport(without, frameId, answer.doc, answer.state);
 }
 
 export function tabSpeed(frames: TabFrames): TabSpeed {

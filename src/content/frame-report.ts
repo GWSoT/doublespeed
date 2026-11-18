@@ -15,10 +15,8 @@
  * - Reports carry an id for this document, so the background can tell a late withdrawal from
  *   the page the tab just left apart from the new page in the same frame. A page back from the
  *   cache takes a new id, so nothing said about it before it left can touch its new report.
- * - Asked which document the frame holds (`FrameDocQuery`), it answers with that id and the
- *   report it last sent, or `null` once the page is hidden. So the background can drop a report
- *   whose withdrawal never arrived, and put back this document's report if the stale one, late,
- *   replaced it.
+ * - Asked which document the frame holds (`FrameDocQuery`), it answers with that id, or `null`
+ *   once the page is hidden, so the background can drop a report whose withdrawal never arrived.
  */
 import { isFrameDocQuery, type FrameState, type FrameStateMessage } from '../lib/tab-speed';
 
@@ -38,7 +36,6 @@ function newDoc(): string {
 export function reportFrame(read: () => FrameState | null, signal: AbortSignal, win: Window = window): FrameReporter {
   const document = win.document as PrerenderingDocument;
   let doc = newDoc();
-  /** The report this document last sent, as JSON: what the background has from it. */
   let sent = 'null';
   let scheduled = false;
   let hidden = false;
@@ -71,9 +68,8 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal, 
   };
 
   // Before the first report goes out, so the background can always ask about one it has.
-  const answer = (message: unknown, _sender: unknown, sendResponse: (held: FrameStateMessage | null) => void) => {
-    if (!isFrameDocQuery(message)) return;
-    sendResponse(hidden ? null : { type: 'frameState', doc, state: JSON.parse(sent) as FrameState | null });
+  const answer = (message: unknown, _sender: unknown, sendResponse: (doc: string | null) => void) => {
+    if (isFrameDocQuery(message)) sendResponse(hidden ? null : doc);
   };
   browser.runtime.onMessage.addListener(answer);
   signal.addEventListener('abort', () => browser.runtime.onMessage.removeListener(answer), { once: true });
