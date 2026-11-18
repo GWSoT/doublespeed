@@ -5,11 +5,13 @@
  * frames come from `127.0.0.1`.
  */
 import type { BrowserContext, Frame, Page } from '@playwright/test';
-import { badge, expect, frameByUrl, openPopup, pressShortcut, tabReports, test } from './extension';
+import { badge, expect, frameByUrl, openPopup, pressShortcut, tabIdOf, tabReports, test } from './extension';
 
 const DEFAULT = 2;
 
-const reportCount = async (context: BrowserContext, page: Page) => Object.keys(await tabReports(context, page)).length;
+const reportCount = async (context: BrowserContext, target: Page | number) =>
+  Object.keys(await tabReports(context, target)).length;
+const thisTab = (popup: Page) => popup.getByRole('group', { name: 'This tab' }).locator('output');
 
 const rateOf = (target: Page | Frame) =>
   target.evaluate(() => document.querySelector<HTMLVideoElement>('#v')!.playbackRate);
@@ -113,6 +115,18 @@ test.describe('the badge', () => {
       document.body.append(frame);
     });
     await expect.poll(() => badge(context, page)).toBe('2×');
+  });
+
+  test('clears on a browser page after a page whose iframes report', async ({ context, page }) => {
+    // The iframes' withdrawals arrive after the move, but the top frame's doesn't, and each
+    // withdrawal used to draw the badge again from the top frame's leftover report.
+    await page.goto('/iframes.html');
+    await expect.poll(() => reportCount(context, page)).toBe(6);
+    const tabId = await tabIdOf(context, page);
+
+    await page.goto('chrome://version');
+    await expect.poll(() => tabReports(context, tabId)).toEqual({});
+    expect(await badge(context, tabId)).toBe('');
   });
 
   test('keeps every live frame’s report when a new frame reports', async ({ context, page }) => {
@@ -242,30 +256,36 @@ test.describe('a frame too busy to answer', () => {
   test('keeps its report, and holds up neither the other frames nor the popup', async ({ context, page }) => {
     await page.goto('/plain.html');
     await expect.poll(() => badge(context, page)).toBe('2×');
+    const tabId = await tabIdOf(context, page);
 
-    // The top frame's main thread is blocked for 4 s. Meanwhile six cross-origin frames, in a
-    // process of their own, report, and each report has the background ask the top frame.
-    const started = Date.now();
-    await page.evaluate(() => {
-      for (let i = 0; i < 6; i++) {
+    // The top frame's main thread is blocked for 6 s. Meanwhile ten cross-origin frames, in a
+    // process of their own, report, and each report has the background ask the top frame. Had
+    // each report waited 500 ms for its answer, the ten would take 5 s.
+    const busyUntil = await page.evaluate(() => {
+      for (let i = 0; i < 10; i++) {
         const frame = document.createElement('iframe');
         frame.src = `http://127.0.0.1:3211/plain.html?${i}`;
         document.body.append(frame);
       }
+      const until = Date.now() + 6000;
       setTimeout(() => {
-        const end = Date.now() + 4000;
-        while (Date.now() < end);
+        while (Date.now() < until);
       });
+      return until;
     });
-    await expect.poll(() => reportCount(context, page), { timeout: 2_500 }).toBe(7);
-    const popup = await openPopup(context, page);
-    await expect(popup.getByRole('group', { name: 'This tab' }).locator('output')).toHaveText('2×', { timeout: 1_500 });
-    expect(Date.now() - started).toBeLessThan(4_000);
+    await expect.poll(() => reportCount(context, tabId), { timeout: 3_500 }).toBe(11);
+    let popup = await openPopup(context, page);
+    await expect(thisTab(popup)).toHaveText('2×', { timeout: 2_500 });
+    expect(Date.now()).toBeLessThan(busyUntil);
+    await popup.close();
 
-    // Once the top frame answers, it's still there.
-    await page.waitForFunction(() => true, undefined, { timeout: 8_000 });
-    await expect.poll(() => tabReports(context, page)).toHaveProperty('0');
-    expect(await reportCount(context, page)).toBe(7);
+    // Once the block is over the top frame answers. A new popup's check waits for that answer,
+    // so by the time the popup shows the tab's speed, the answer has been handled.
+    await page.evaluate(() => 0);
+    popup = await openPopup(context, page);
+    await expect(thisTab(popup)).toHaveText('2×');
+    expect(await tabReports(context, tabId)).toHaveProperty('0');
+    expect(await reportCount(context, tabId)).toBe(11);
   });
 });
 
@@ -302,8 +322,7 @@ test.describe('with the back/forward cache', () => {
     expect(await reportCount(context, page)).toBe(6);
     await popup.close();
 
-    // The first page was in the cache all along.
-    // A page from the cache fires no `load`.
+    // Back to the first page, which was in the cache all along, so no `load` fires.
     await page.goBack({ waitUntil: 'commit' });
     expect(await restored(page)).toBe(true);
   });

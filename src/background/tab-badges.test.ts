@@ -137,6 +137,56 @@ describe('a report whose withdrawal never arrived (issue #26)', () => {
   });
 });
 
+describe('a withdrawal', () => {
+  it('has the other frames asked, so a top frame that left without one goes too', async () => {
+    fake.frames.set(0, 'top').set(4, 'player');
+    badges.report(TAB, 0, 'top', at(2));
+    badges.report(TAB, 4, 'player', at(1.5));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 4: 'player' }));
+
+    // The tab moved to a browser page: the iframe's withdrawal arrives, the top frame's doesn't.
+    fake.frames.clear();
+    badges.report(TAB, 4, 'player', null);
+    await vi.waitFor(() => expect(fake.stored()).toEqual({}));
+    expect(fake.badge()).toBe('');
+  });
+
+  it('keeps the reports of frames still there', async () => {
+    fake.frames.set(0, 'top').set(4, 'player');
+    badges.report(TAB, 0, 'top', at(2));
+    badges.report(TAB, 4, 'player', at(1.5));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 4: 'player' }));
+
+    fake.frames.delete(4);
+    badges.report(TAB, 4, 'player', null);
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top' }));
+    await settle();
+    expect(fake.stored()).toEqual({ 0: 'top' });
+  });
+});
+
+describe('a page back from the back/forward cache', () => {
+  it('can’t lose its report to an answer about its old document id', async () => {
+    fake.frames.set(0, 'top');
+    badges.report(TAB, 0, 'top', at(2));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top' }));
+
+    // The background asks while the page is going into the cache; the answer, null, is held up.
+    const leaving = fake.busy(0);
+    void badges.check(TAB);
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    // The page comes back under a new id and reports, before that answer lands.
+    fake.frames.set(0, 'top-again');
+    badges.report(TAB, 0, 'top-again', at(2));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top-again' }));
+    leaving.answer(null);
+    await settle();
+    expect(fake.stored()).toEqual({ 0: 'top-again' });
+    expect(fake.badge()).toBe('2×');
+  });
+});
+
 describe('a busy frame', () => {
   it('holds up no report, and its late answer still counts', async () => {
     fake.frames.set(0, 'old-top');

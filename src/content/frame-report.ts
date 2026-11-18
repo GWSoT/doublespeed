@@ -9,9 +9,10 @@
  * - A page the browser prerenders reports only once it's shown (`prerenderingchange`): until
  *   then it isn't the page in the tab, and Chrome gives its top frame another `frameId`.
  * - Reports carry an id for this document, so the background can tell a late withdrawal from
- *   the page the tab just left apart from the new page in the same frame.
- * - Asked which document the frame holds (`FrameDocQuery`), it answers with that id, so the
- *   background can drop a report whose withdrawal never arrived.
+ *   the page the tab just left apart from the new page in the same frame. A page back from the
+ *   cache takes a new id, so nothing said about it before it left can touch its new report.
+ * - Asked which document the frame holds (`FrameDocQuery`), it answers with that id, or `null`
+ *   once the page is hidden, so the background can drop a report whose withdrawal never arrived.
  */
 import { isFrameDocQuery, type FrameState, type FrameStateMessage } from '../lib/tab-speed';
 
@@ -20,14 +21,17 @@ export interface FrameReporter {
   changed(): void;
 }
 
-/** Whether Chrome is prerendering this page. Firefox doesn't prerender, and TypeScript's DOM types lack it. */
-function prerendering(): boolean {
-  return (document as Document & { prerendering?: boolean }).prerendering === true;
+/** Chrome's `document.prerendering`; Firefox doesn't prerender, and TypeScript's DOM types lack it. */
+type PrerenderingDocument = Document & { prerendering?: boolean };
+
+/** A new document id. `crypto.randomUUID` needs a secure context, which plain-http pages aren't. */
+function newDoc(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function reportFrame(read: () => FrameState | null, signal: AbortSignal): FrameReporter {
-  // `crypto.randomUUID` needs a secure context, which plain-http pages aren't.
-  const doc = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+export function reportFrame(read: () => FrameState | null, signal: AbortSignal, win: Window = window): FrameReporter {
+  const document = win.document as PrerenderingDocument;
+  let doc = newDoc();
   let sent = 'null';
   let scheduled = false;
   let hidden = false;
@@ -43,7 +47,7 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal):
 
   function flush(): void {
     scheduled = false;
-    if (hidden || signal.aborted || prerendering()) return;
+    if (hidden || signal.aborted || document.prerendering === true) return;
     const state = read();
     const json = JSON.stringify(state);
     if (json === sent) return;
@@ -67,7 +71,7 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal):
   signal.addEventListener('abort', () => browser.runtime.onMessage.removeListener(answer), { once: true });
 
   const listen = { signal };
-  window.addEventListener(
+  win.addEventListener(
     'pagehide',
     () => {
       hidden = true;
@@ -77,13 +81,14 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal):
     },
     listen,
   );
-  if (prerendering()) {
+  if (document.prerendering === true) {
     document.addEventListener('prerenderingchange', () => reporter.changed(), { once: true, signal });
   }
-  window.addEventListener(
+  win.addEventListener(
     'pageshow',
     (event) => {
       if (!event.persisted) return;
+      doc = newDoc();
       hidden = false;
       reporter.changed();
     },

@@ -43,7 +43,10 @@ export interface FrameDocQuery {
   type: 'frameDoc';
 }
 
-/** From the popup, before it reads a tab's reports: drop the stale ones. Answered once done. */
+/**
+ * From the popup, before it reads a tab's reports: drop the stale ones. Answered once every
+ * frame has answered, or after half a second.
+ */
 export interface CheckTabMessage {
   type: 'checkTab';
   tabId: number;

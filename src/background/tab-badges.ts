@@ -8,7 +8,8 @@
  * tab moves to a browser page, where nothing runs to replace the report (issue #26). So the
  * background asks each frame with a report whether it still holds the document that sent it,
  * and applies the missing withdrawal when it doesn't. It asks when a report comes from a
- * document the tab doesn't hold yet, and when the popup opens.
+ * document the tab doesn't hold yet, when a withdrawal removes a report, and when the popup
+ * opens.
  */
 import {
   applyReport,
@@ -129,10 +130,12 @@ export function createTabBadges(): TabBadges {
   return {
     report(tabId, frameId, doc, state) {
       void apply(tabId, frameId, doc, state).then((before) => {
-        // A report the tab didn't hold for this document: a new page, or a frame reporting
-        // again. Its page may have replaced documents whose withdrawals never arrived, and it
-        // may itself be gone already, so every frame is asked, this one too.
-        if (state && before && before[frameId]?.doc !== doc) void verifyAll(tabId);
+        // A report the tab didn't hold for this document (a new page, or a frame reporting
+        // again), or a withdrawal. Either can come from a page that replaced, or is leaving,
+        // documents whose withdrawals never arrive: the frames of a page that left for a browser
+        // page withdraw after the move, while its top frame can't. So every frame is asked, the
+        // reporter too, since it may be gone already.
+        if (before && (!state || before[frameId]?.doc !== doc)) void verifyAll(tabId);
       });
     },
 
