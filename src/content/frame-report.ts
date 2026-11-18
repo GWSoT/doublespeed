@@ -8,8 +8,10 @@
  *   (`pageshow`) sends it again.
  * - Reports carry an id for this document, so the background can tell a late withdrawal from
  *   the page the tab just left apart from the new page in the same frame.
+ * - Asked which document the frame holds (`FrameDocQuery`), it answers with that id, so the
+ *   background can drop a report whose withdrawal never arrived.
  */
-import type { FrameState, FrameStateMessage } from '../lib/tab-speed';
+import { isFrameDocQuery, type FrameState, type FrameStateMessage } from '../lib/tab-speed';
 
 export interface FrameReporter {
   /** Something changed that may change the report; sends it, at most once per task. */
@@ -49,6 +51,13 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal):
       queueMicrotask(flush);
     },
   };
+
+  // Before the first report goes out, so the background can always ask about one it has.
+  const answer = (message: unknown, _sender: unknown, sendResponse: (doc: string | null) => void) => {
+    if (isFrameDocQuery(message)) sendResponse(hidden ? null : doc);
+  };
+  browser.runtime.onMessage.addListener(answer);
+  signal.addEventListener('abort', () => browser.runtime.onMessage.removeListener(answer), { once: true });
 
   const listen = { signal };
   window.addEventListener(

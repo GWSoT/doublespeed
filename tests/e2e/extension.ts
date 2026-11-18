@@ -212,3 +212,14 @@ export async function frameByUrl(page: Page, matches: (url: string) => boolean):
   await expect.poll(() => page.frames().some((f) => matches(f.url()))).toBe(true);
   return page.frames().find((f) => matches(f.url()))!;
 }
+
+/** The frame reports the background keeps for `page`'s tab (SPEC §4, `tab:<tabId>`), by frame id. */
+export async function tabReports(context: BrowserContext, page: Page): Promise<Record<string, unknown>> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  return worker.evaluate(async (url) => {
+    const tab = (await chrome.tabs.query({})).find((t) => t.url === url);
+    if (!tab) throw new Error(`no tab at ${url}`);
+    const key = `tab:${tab.id}`;
+    return ((await chrome.storage.session.get(key))[key] ?? {}) as Record<string, unknown>;
+  }, page.url());
+}

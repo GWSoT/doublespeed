@@ -3,7 +3,7 @@ import { ACCESS_GRANT_KEY, tabToReload } from '../src/lib/access-grant';
 import { hostOfUrl, isGetPageSite } from '../src/lib/page-site';
 import { installSeed, SETTINGS_KEY } from '../src/lib/settings';
 import { isSpeedCommand, speedCommandMessage } from '../src/lib/speed-commands';
-import { isFrameStateMessage } from '../src/lib/tab-speed';
+import { isCheckTabMessage, isFrameStateMessage } from '../src/lib/tab-speed';
 
 // The service worker on Chrome, an event page on Firefox (SPEC §5). Listeners are registered
 // synchronously, so the browser can wake it for each event.
@@ -32,6 +32,12 @@ export default defineBackground(() => {
     badges.report(tabId, sender.frameId ?? 0, message.doc, message.state);
   });
   browser.tabs.onRemoved.addListener((tabId) => badges.forget(tabId));
+  // The popup, before it shows a tab's speed: drop the reports of pages the tab has left.
+  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (!isCheckTabMessage(message)) return;
+    void badges.check(message.tabId).then(() => sendResponse(true));
+    return true;
+  });
 
   // The popup's grant button (SPEC §2.2): once site access comes back, reload the tab the user
   // asked from, since its content scripts only arrive with the next load.

@@ -34,6 +34,21 @@ export interface FrameStateMessage {
   state: FrameState | null;
 }
 
+/**
+ * Asks one frame, through `tabs.sendMessage` with its `frameId`, which document it holds. The
+ * frame's content script answers with the `doc` of its reports, or `null` once that document is
+ * going away.
+ */
+export interface FrameDocQuery {
+  type: 'frameDoc';
+}
+
+/** From the popup, before it reads a tab's reports: drop the stale ones. Answered once done. */
+export interface CheckTabMessage {
+  type: 'checkTab';
+  tabId: number;
+}
+
 /** What the background keeps per frame. */
 export interface StoredFrame extends FrameState {
   doc: string;
@@ -70,6 +85,28 @@ export function applyReport(frames: TabFrames, frameId: number, doc: string, sta
   return rest;
 }
 
+/**
+ * `frames` without the stale reports: those whose frame no longer holds the document that sent
+ * them. A document withdraws its report on `pagehide`, but that message can go missing: it does
+ * when the tab moves to a browser page, where nothing runs to replace it (issue #26).
+ *
+ * `holds` asks a frame whether it still holds a document; a frame it can't get an answer from is
+ * kept. `skip` is a frame not to ask. Returns `frames` itself when every report stays.
+ */
+export async function dropGone(
+  frames: TabFrames,
+  holds: (frameId: number, doc: string) => Promise<boolean>,
+  skip?: number,
+): Promise<TabFrames> {
+  const asked = Object.keys(frames).filter((key) => Number(key) !== skip);
+  const answers = await Promise.all(
+    asked.map((key) => holds(Number(key), frames[key]!.doc).catch(() => true)),
+  );
+  const gone = new Set(asked.filter((_, i) => !answers[i]));
+  if (!gone.size) return frames;
+  return Object.fromEntries(Object.entries(frames).filter(([key]) => !gone.has(key)));
+}
+
 export function tabSpeed(frames: TabFrames): TabSpeed {
   const ordered = Object.keys(frames)
     .sort((a, b) => Number(a) - Number(b))
@@ -102,6 +139,14 @@ export function badgeText(tab: TabSpeed, off: string, wholeSpeed: (speed: string
 export function isFrameStateMessage(message: unknown): message is FrameStateMessage {
   if (!isRecord(message) || message.type !== 'frameState' || typeof message.doc !== 'string') return false;
   return message.state === null || isFrameState(message.state);
+}
+
+export function isFrameDocQuery(message: unknown): message is FrameDocQuery {
+  return isRecord(message) && message.type === 'frameDoc';
+}
+
+export function isCheckTabMessage(message: unknown): message is CheckTabMessage {
+  return isRecord(message) && message.type === 'checkTab' && Number.isInteger(message.tabId);
 }
 
 /** Reads a tab's frames from `storage.session`, dropping anything malformed. */

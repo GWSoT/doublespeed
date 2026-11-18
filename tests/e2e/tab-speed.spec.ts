@@ -5,7 +5,7 @@
  * frames come from `127.0.0.1`.
  */
 import type { Frame, Page } from '@playwright/test';
-import { badge, expect, frameByUrl, openPopup, pressShortcut, test } from './extension';
+import { badge, expect, frameByUrl, openPopup, pressShortcut, tabReports, test } from './extension';
 
 const DEFAULT = 2;
 
@@ -95,6 +95,40 @@ test.describe('the badge', () => {
     await expect.poll(() => badge(context, page)).toBe('off');
   });
 
+  test('isn’t held by the last page’s report after a browser page', async ({ context, page, storage }) => {
+    // Issue #26: a page withdraws its report on `pagehide`, and that withdrawal doesn't arrive
+    // when the tab moves to a browser page. Here the next web page's video is in an iframe, so a
+    // leftover `off` from the old top frame would outweigh it.
+    await storage.disableSite('localhost');
+    await page.goto('/plain.html');
+    await expect.poll(() => badge(context, page)).toBe('off');
+
+    await page.goto('chrome://version');
+    await page.goto('http://127.0.0.1:3211/empty.html');
+    await page.evaluate(() => {
+      const frame = document.createElement('iframe');
+      frame.src = '/plain.html';
+      document.body.append(frame);
+    });
+    await expect.poll(() => badge(context, page)).toBe('2×');
+  });
+
+  test('keeps every live frame’s report when a new frame reports', async ({ context, page }) => {
+    await page.goto('/iframes.html');
+    await expect.poll(async () => Object.keys(await tabReports(context, page)).length).toBe(6);
+    const before = Object.keys(await tabReports(context, page));
+
+    // The new frame's first report makes the background ask the others which document they
+    // hold, before it adds the report: seven means none of the six was dropped.
+    await page.evaluate(() => {
+      const frame = document.createElement('iframe');
+      frame.src = '/plain.html';
+      document.body.append(frame);
+    });
+    await expect.poll(async () => Object.keys(await tabReports(context, page)).length).toBe(7);
+    expect(Object.keys(await tabReports(context, page))).toEqual(expect.arrayContaining(before));
+  });
+
   test('follows the video playing, in whichever frame it is', async ({ context, page }) => {
     await page.goto('/iframes.html');
     const cross = await frameByUrl(page, (url) => url.startsWith('http://127.0.0.1:3211/'));
@@ -154,6 +188,27 @@ test.describe("the popup's −/+ for this tab", () => {
 
     await pressShortcut(context, page, 'toggle-speed');
     await expect(shown(popup)).toHaveText('1×');
+  });
+
+  test('forgets the last page’s video once the tab moves to a page it can’t run on', async ({ context, page }) => {
+    // Issue #26: the withdrawal sent on `pagehide` doesn't arrive when the next page is a
+    // browser page, and nothing runs there to replace it.
+    await page.goto('/plain.html');
+    await expect.poll(() => badge(context, page)).toBe('2×');
+
+    await page.goto('chrome://version');
+    let popup = await openPopup(context, page);
+    await expect(popup.locator('#site-note')).toHaveText("Browsers don't let extensions run on their own pages.");
+    await expect(shown(popup)).toHaveText('No video');
+    await expect(faster(popup)).toBeDisabled();
+    await expect(slower(popup)).toBeDisabled();
+    await popup.close();
+
+    // A web page without a video sends no report of its own either.
+    await page.goto('/empty.html');
+    popup = await openPopup(context, page);
+    await expect(popup.getByRole('heading', { name: 'localhost' })).toBeVisible();
+    await expect(shown(popup)).toHaveText('No video');
   });
 
   test('is disabled without a video, and on a disabled site', async ({ context, page, storage }) => {
