@@ -24,7 +24,6 @@ category, so a listing under that name risks takedown.
 
 - **Pricing and licence:** free, MIT-licensed.
 - **Privacy:** no analytics, no network requests, and a `PRIVACY.md` saying nothing is collected. Firefox's manifest declares `data_collection_permissions: none`.
-  - *Amended 2026-11-18:* the Chrome Web Store counts data an extension handles on the device as user data, so `PRIVACY.md` now lists what Doublespeed reads and keeps instead of saying nothing is collected, and the store's privacy form declares web history and user activity ([`store/listing.md`](../../store/listing.md)). The practice is unchanged: nothing leaves the browser except the settings, through the browser's own sync. Mozilla's declaration covers only data handled outside the add-on or the browser, so it stays `none`.
 - **Name:** listed as Doublespeed. The GitHub repo is renamed `GWSoT/doublespeed`, and the local folder keeps its old name.
 - **Repo visibility:** private until just before the first store submission, then public.
 - **Submissions:** the first submission to each store is by hand. `wxt submit` automation comes later.

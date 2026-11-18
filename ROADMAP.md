@@ -15,7 +15,7 @@ videos ever played at 1×?*
 | [0003](docs/decisions/0003-speed-rules.md) | Every `<video>` starts at the default speed (2×). The user's change wins for that video, site resets are undone, live videos are left alone. |
 | [0004](docs/decisions/0004-site-rules.md) | Disabled sites match exact hostnames, `*.` covers subdomains, the address bar decides for iframes, `music.youtube.com` is seeded off. |
 | [0005](docs/decisions/0005-controls.md) | `Alt+.` / `Alt+,` / `Alt+R` browser shortcuts, a per-tab badge, a brief speed label, no welcome tab. |
-| [0006](docs/decisions/0006-distribution-and-privacy.md) | Free, MIT, nothing leaves the browser. Listed as "Doublespeed"; repo public before the first submission. |
+| [0006](docs/decisions/0006-distribution-and-privacy.md) | Free, MIT, nothing leaves the browser but synced settings. Listed as "Doublespeed"; repo public before the first submission. |
 
 **Three findings shaped the plan.**
 - **Site access isn't guaranteed.** Firefox lets users revoke an MV3 extension's site access at any time, and Chrome lets them restrict it. The popup has to notice, so Phase 3 has a slice for it.

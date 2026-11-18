@@ -28,17 +28,17 @@ summary come from the manifest (`extName` and `extDescription` in
 ```text
 Doublespeed plays web videos at 2× by default, so you don't have to hunt for a speed menu.
 
-• Embedded players, and ones without such a menu, are covered too.
-• Your choice wins: set a speed with the shortcuts, or pick one in the player's own menu, and Doublespeed keeps to it until the next video, which starts at your default again.
-• Sites don't quietly undo it: when one changes it by itself, not right after a click or key press of yours, Doublespeed puts yours back. If it keeps doing that (more than five times in ten seconds), Doublespeed lets it be until the next video; a shortcut takes it back.
+• Embedded players, and ones without such a menu, work too.
+• Your choice wins: set a speed with the shortcuts and Doublespeed keeps to it until the next video, which starts at your default again. A pick in the player's own menu is kept the same way, when the player applies it within a second of your click or key press.
+• Sites don't quietly undo your choice: if one changes it when you haven't just clicked or pressed a key, Doublespeed sets it back. A site that keeps at it (more than five times in ten seconds) is left alone until the next video, or until you use a shortcut.
 • Shortcuts: Alt+. faster and Alt+, slower, in 0.25× steps. Alt+R goes to 1×, and from 1× back to your default. Change them at chrome://extensions/shortcuts.
-• See where you are: after a shortcut, or the popup's −/+ for the tab, a small label shows the new speed on each changed player in view. Pin Doublespeed's toolbar icon to see the tab's speed on it.
+• See your speed: after a shortcut, or the popup's −/+ for the tab, a small label shows the new speed on each changed player in view. Pin the toolbar icon to see the tab's speed on it.
 • Off where you want it: turn it off for a site from the popup. music.youtube.com starts off.
 • Your default: 2× unless you set another in the popup, from 0.25× to 4×.
 
-Live streams are usually left alone: Doublespeed skips anything that reports no end.
+Live streams that report no end are left alone.
 
-Privacy: Doublespeed makes no network requests and has no analytics. It reads each page's address, to check it against your list of sites where it's off, and the address of what's playing, to notice when it moves on. It notes when you last clicked or pressed a key, never which key or where, to tell your choices from the site's. Nothing it reads leaves your browser, except your settings, which your browser's own sync copies to your other devices if you have it on.
+Privacy: no network requests and no analytics. Doublespeed reads each page's address, to check it against your list of sites where it's off, and the address of what's playing, to notice when it moves on. It notes when you last clicked or pressed a key, never which key or where, to tell your choices from the site's. Nothing it reads leaves your browser, except your settings, which your browser's own sync copies to your other devices if you have it on.
 ```
 
 **Category:** Tools. **Language:** English.
@@ -64,10 +64,10 @@ Doublespeed controls the playback speed of videos on web pages. It sets videos t
 
 | Permission | Justification |
 |---|---|
-| `storage` | `Keeps the user's settings in storage.sync: their default speed, the sites Doublespeed is off on (with the date each was added), and whether they've closed the shortcut hint. In storage.session, which the browser clears when it closes, it keeps each tab's video speed, whether it's playing, when it last started and whether the tab's site is off, for the toolbar badge and the popup. While the user is giving Doublespeed its site access back from the popup, it also keeps which tab asked and when, to reload that tab once access is granted.` |
-| Host permission (`<all_urls>`) | `Videos can be on any site and inside any frame, so the content script runs on every page to find each video element and set its playback speed. On each page it reads the page's address, to check it against the user's list of sites where Doublespeed is off, and each video's source address and state (its speed, length, whether it's playing and where it is on screen), to notice a new video, to show the tab's speed and to place the speed label. It notes the time of the user's last click or key press, but not which key or where, to tell a speed the user chose from one the site set. The source addresses and the input time stay in the page's memory. The popup and the background read the tab's address too, to name its site and to apply the site list inside frames. It stores only each tab's video speed, in session storage, and the site list. It makes no network requests, so nothing is sent anywhere.` |
+| `storage` | `Keeps the user's settings in storage.sync, which the browser copies to the user's other devices if they have its sync on: their default speed, the sites Doublespeed is off on (with the date each was added), and whether they've closed the shortcut hint. In storage.session, which the browser clears when it closes, it keeps, for each frame of each tab, its video's speed, whether it's playing, when it last started and whether the site is off, with the ids that tell the frames and their documents apart, for the toolbar badge and the popup. While the user is giving Doublespeed its site access back from the popup, it also keeps which tab asked and when, to reload that tab once access is granted.` |
+| Host permission (`<all_urls>`) | `Videos can be on any site and inside any frame, so the content script runs on every page to find each video element and set its playback speed. On each page it reads the page's address, to check it against the user's list of sites where Doublespeed is off, and each video's source address and state (its speed, length, whether it's playing and where it is on screen), to notice a new video, to show the tab's speed and to place the speed label. It notes the time of the user's last click or key press, but not which key or where, to tell a speed the user chose from one the site set. The source addresses and the input time stay in the page's memory. The popup and the background read the tab's address too, to name its site and to apply the site list inside frames. What it stores is listed under storage. Doublespeed itself sends nothing anywhere: it makes no network requests.` |
 
-  The host justification is 903 characters; the dashboard's limit for it is unverified (it shows a
+  The host justification is 879 characters; the dashboard's limit for it is unverified (it shows a
   counter), so check the counter when pasting.
 
 **Remote code:** No, I am not using remote code.
@@ -76,8 +76,10 @@ Doublespeed controls the playback speed of videos on web pages. It sets videos t
 ([Data usage](#data-usage) says why). Tick all three certifications (no selling or transfer, no
 use unrelated to the single purpose, no use for credit decisions).
 
-**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. It now names
-the two data types and carries the Limited Use statement ([Limited Use](#limited-use)).
+**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. From the
+day 1.0.0 is uploaded it names the two data types and carries the Limited Use statement
+([Limited Use](#limited-use)); until then it keeps the text 0.1.1 went to review with
+([Still open](#still-open)).
 
 ### Distribution tab
 
@@ -87,7 +89,7 @@ the two data types and carries the Limited Use statement ([Limited Use](#limited
 ### Test instructions tab
 
 ```text
-No account or setup needed.
+No account or setup needed. Use a fresh browser profile: settings synced from another browser would replace the defaults these steps assume.
 
 1. Open https://www.youtube.com/watch?v=aqz-KE-bpKQ (a ten-minute film). The video plays at 2×.
 2. Pin Doublespeed from the Extensions menu (the puzzle-piece button in the toolbar). Its icon then shows "2×", the tab's speed.
@@ -98,7 +100,11 @@ No account or setup needed.
 
 ## addons.mozilla.org, 1.0.0
 
-Submitted from the Developer Hub's Submit a New Add-on, "On this site".
+Submitted from the Developer Hub's Submit a New Add-on, "On this site". Not before
+[#32](https://github.com/GWSoT/doublespeed/issues/32) is settled: Mozilla's policies say "Data from
+private browsing sessions must not be stored" ([Add-on Policies][amo-policies], 6.3), and in a
+private window the user allowed it in, Doublespeed stores the tab's reports and, if they turn a
+site off there, the site.
 
 ### Upload Version
 
@@ -142,17 +148,17 @@ Submitted from the Developer Hub's Submit a New Add-on, "On this site".
   ```text
   Doublespeed plays web videos at 2× by default, so you don't have to hunt for a speed menu.
 
-  - Embedded players, and ones without such a menu, are covered too.
-  - Your choice wins: set a speed with the shortcuts, or pick one in the player's own menu, and Doublespeed keeps to it until the next video, which starts at your default again.
-  - Sites don't quietly undo it: when one changes it by itself, not right after a click or key press of yours, Doublespeed puts yours back. If it keeps doing that (more than five times in ten seconds), Doublespeed lets it be until the next video; a shortcut takes it back.
+  - Embedded players, and ones without such a menu, work too.
+  - Your choice wins: set a speed with the shortcuts and Doublespeed keeps to it until the next video, which starts at your default again. A pick in the player's own menu is kept the same way, when the player applies it within a second of your click or key press.
+  - Sites don't quietly undo your choice: if one changes it when you haven't just clicked or pressed a key, Doublespeed sets it back. A site that keeps at it (more than five times in ten seconds) is left alone until the next video, or until you use a shortcut.
   - Shortcuts: Alt+. faster and Alt+, slower, in 0.25× steps. Alt+R goes to 1×, and from 1× back to your default. To change them, open about:addons, click the gear button, and choose Manage Extension Shortcuts.
-  - See where you are: after a shortcut, or the popup's −/+ for the tab, a small label shows the new speed on each changed player in view. Pin Doublespeed's toolbar icon to see the tab's speed on it.
+  - See your speed: after a shortcut, or the popup's −/+ for the tab, a small label shows the new speed on each changed player in view. Pin the toolbar icon to see the tab's speed on it.
   - Off where you want it: turn it off for a site from the popup. music.youtube.com starts off.
   - Your default: 2× unless you set another in the popup, from 0.25× to 4×.
 
-  Live streams are usually left alone: Doublespeed skips anything that reports no end.
+  Live streams that report no end are left alone.
 
-  Privacy: Doublespeed makes no network requests and has no analytics. It reads each page's address, to check it against your list of sites where it's off, and the address of what's playing, to notice when it moves on. It notes when you last clicked or pressed a key, never which key or where, to tell your choices from the site's. Nothing it reads leaves your browser, except your settings, which your browser's own sync copies to your other devices if you have it on. Privacy policy: https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md
+  Privacy: no network requests and no analytics. Doublespeed reads each page's address, to check it against your list of sites where it's off, and the address of what's playing, to notice when it moves on. It notes when you last clicked or pressed a key, never which key or where, to tell your choices from the site's. Nothing it reads leaves your browser, except your settings, which your browser's own sync copies to your other devices if you have it on. Privacy policy: https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md
   ```
 
 - **This add-on is experimental:** no. **Requires payment:** no.
@@ -168,7 +174,9 @@ Submitted from the Developer Hub's Submit a New Add-on, "On this site".
 - **Notes for Reviewers:**
 
   ```text
-  No account or setup needed.
+  No account or setup needed. Use a fresh browser profile: settings synced from another browser would replace the defaults these steps assume.
+
+  If the video in step 1 plays at 1×, open Doublespeed's popup from the Extensions button. If it says "Doublespeed doesn't have access to this page", Firefox hasn't granted it site access: click "Allow on all sites" and allow it, and the page reloads with Doublespeed running.
 
   1. Open https://www.youtube.com/watch?v=aqz-KE-bpKQ (a ten-minute film). The video plays at 2×.
   2. Pin Doublespeed from the Extensions button (the puzzle piece in the toolbar). Its icon then shows "2×", the tab's speed.
@@ -176,9 +184,7 @@ Submitted from the Developer Hub's Submit a New Add-on, "On this site".
   4. Click Doublespeed's toolbar icon to open its popup. It shows youtube.com with a switch beside it, and "Videos play at your default speed." under it.
   5. Click the switch to turn Doublespeed off for youtube.com. The popup now reads "Off. The site sets the speed.", the video goes back to the speed it had before Doublespeed changed it (1×), and the icon shows "off".
 
-  If the popup instead says "Doublespeed doesn't have access to this page", Firefox hasn't granted it site access: click "Allow on all sites" and allow it, and the page reloads with Doublespeed running.
-
-  Source code: the add-on is bundled and minified by WXT (Vite), so its source is attached: the repository's files at the release commit, also public at https://github.com/GWSoT/doublespeed. To build it, with Node 22 or later and npm, run in the unzipped folder:
+  Source code: the add-on is bundled and minified by WXT (Vite), so its source is attached: the repository's files at the release commit, also public at https://github.com/GWSoT/doublespeed. To build it, with Node 22.12 or later and npm, run in the unzipped folder:
 
     npm ci
     npm run build:firefox
@@ -187,6 +193,9 @@ Submitted from the Developer Hub's Submit a New Add-on, "On this site".
 
   Data: the manifest declares no data collection. Doublespeed makes no network requests. It keeps its settings in storage.sync, which Firefox Sync copies to the user's other devices if they have it on; nothing else leaves the browser.
   ```
+
+The notes' "file for file the same" sentence is true of 1.0.0 only once the rebuild in
+[Still open](#still-open) has passed; paste it after that.
 
 After submission, on the add-on's Edit Product Page:
 
@@ -221,22 +230,25 @@ keyword more than 5 times". A bullet naming six sites got 0.1.0 rejected ("Yello
 rule is stricter: no site names, except music.youtube.com to say it starts off there, and no
 keyword more than five times. 0.1.1's description has "video" seven times and "speed" six.
 
-Counted without "Doublespeed", case aside, plurals included. The list is every word of the
-description's subject matter; a word swapped in for "video" or "speed" counts the same:
+Counted case aside, plurals included. The list is every word of the description's subject matter,
+since a word swapped in for "video" or "speed" counts the same, and the name on its own line: it
+holds "speed", so it is taken out before the other words are counted and kept to five itself.
 
 ```sh
-count() { awk -v h="$1" 'index($0, h) == 1 {f = 1} f && /^ *```/ {if (p) exit; p = 1; next} p' store/listing.md |
-  perl -pe 's/doublespeed//gi' | grep -oiE 'video|speed|player|default|shortcut|site|menu|popup' |
+desc() { awk -v h="$1" 'index($0, h) == 1 {f = 1} f && /^ *```/ {if (p) exit; p = 1; next} p' store/listing.md; }
+count() { desc "$1" | grep -oi 'doublespeed' | wc -l | tr -d ' \n'; printf ' doublespeed, '
+  desc "$1" | perl -pe 's/doublespeed//gi' | grep -oiE 'video|speed|player|default|shortcut|site|menu|popup' |
   tr A-Z a-z | sort | uniq -c | tr '\n' ' '; echo; }
 count '**Description:**'                # Chrome
 count '- **Description (Markdown):**'   # AMO
 ```
 
-Both give: default 4, menu 3, player 3, popup 3, shortcut 5, site 4, speed 4, video 3.
+Chrome: 4 doublespeed, 4 default, 3 menu, 4 player, 3 popup, 5 shortcut, 5 site, 5 speed, 3 video.
+AMO: the same, but 5 doublespeed, the fifth in the privacy policy's address.
 
 The Chrome summary adds two of "video" and one each of "speed", "default" and "site", and the AMO
-summary one each of "video", "speed" and "default", so even counted together with its summary each
-description stays at five or fewer of every word.
+summary one each of "video", "speed" and "default". The summary is its own field, and the counts
+above are the description's.
 
 [cws-listing]: https://developer.chrome.com/docs/webstore/program-policies/policies#listing_requirements
 
@@ -245,18 +257,18 @@ description stays at five or fewer of every word.
 | Claim | Holds because | Left out on purpose |
 |---|---|---|
 | "Plays web videos at 2× by default" (summary, description, single purpose: "sets videos to the user's default speed") | Rule 1 sets the default speed on each new source (`src/lib/speed-rules.ts:109`); the default is 2× on install (SPEC §4). | "every" and "from the first frame": live videos are left alone (`speed-rules.ts:106`); a video can play before the content script has read its settings, since it reads them before it looks for videos (`entrypoints/content.ts:25`, `:52`); a custom-element player defined after load that autoplays with no DOM change and no click is SPEC §5's known gap; a closed shadow root on a built-in element isn't looked into (`src/content/video-finder.ts:177`); and nothing runs where the browser withholds site access (SPEC §2.2). |
-| "Embedded players, and ones without such a menu, are covered too." | The content script runs in every frame, `about:blank` ones included (`content.ts:11–15`), and every frame follows the page site (`src/content/frame-settings.ts:59–61`, `entrypoints/background.ts:24`). Rule 1 doesn't depend on the player. Real sites: a blog's YouTube embed passed the Phase 1 check. | With Chrome's site access set to specific sites, a frame from another site gets no content script; the claim assumes the access Doublespeed asks for. |
-| "set a speed with the shortcuts, or pick one in the player's own menu, and Doublespeed keeps to it until the next video" | Rule 3: a `ratechange` within 1 s of a trusted click or key press in the video's frame, made after the default was applied, becomes the override (`speed-rules.ts:184–191`), and a player's own menu is in the video's frame. Shortcuts: rule 5 (`speed-rules.ts:146–157`). The override is the target speed until the source changes (SPEC §3.1). | An embedding page's own speed controls outside the player's frame: the click is in the parent frame, which rule 3 doesn't see, so the change counts as a site reset (SPEC §3.2, rules 3–4). Hence "the player's own menu". And a menu that doesn't know the speed Doublespeed set: YouTube's steps from the speed YouTube believes it's at (1×), so at 2× choosing Normal there changes nothing and `>` gives 1.25× (real-Chrome check, 2026-11-16; it comes with staying in the isolated world, ROADMAP Phase 1's decision table). Doublespeed keeps to whatever speed the menu does set, which is all the bullet says, and the shortcuts come first in it because Alt+R gives 1× everywhere. |
+| "Embedded players, and ones without such a menu, work too." | The content script runs in every frame, `about:blank` ones included (`content.ts:11–15`), and every frame follows the page site (`src/content/frame-settings.ts:59–61`, `entrypoints/background.ts:24`). Rule 1 doesn't depend on the player. Real sites: a blog's YouTube embed passed the Phase 1 check. | With Chrome's site access set to specific sites, a frame from another site gets no content script; the claim assumes the access Doublespeed asks for. |
+| "set a speed with the shortcuts and Doublespeed keeps to it until the next video … A pick in the player's own menu is kept the same way, when the player applies it within a second of your click or key press." | Rule 3: a `ratechange` within 1 s of a trusted click or key press in the video's frame, made after the default was applied, becomes the override (`speed-rules.ts:184–191`), and a player's own menu is in the video's frame. Shortcuts: rule 5 (`speed-rules.ts:146–157`). The override is the target speed until the source changes (SPEC §3.1). | An embedding page's own speed controls outside the player's frame: the click is in the parent frame, which rule 3 doesn't see, so the change counts as a site reset (SPEC §3.2, rules 3–4). Hence "the player's own menu". And a menu that doesn't know the speed Doublespeed set: YouTube's steps from the speed YouTube believes it's at (1×), so at 2× choosing Normal there changes nothing and `>` gives 1.25× (real-Chrome check, 2026-11-16; it comes with staying in the isolated world, ROADMAP Phase 1's decision table). Doublespeed keeps to whatever speed the menu does set, which is all the bullet says, and the shortcuts come first in it because Alt+R gives 1× everywhere. A pick the player applies more than a second after the click counts as a site reset and is undone, hence "within a second". After Doublespeed has left a site alone (rule 4), a menu pick still plays but isn't recorded as an override (`speed-rules.ts:170`); nothing undoes it before the next video. |
 | "the next video, which starts at your default again" | A new source starts rule 1 over (`speed-rules.ts:104–109`). | |
-| "when one changes it by itself, not right after a click or key press of yours, Doublespeed puts yours back" | Rule 4 re-sets the target speed (`speed-rules.ts:193–198`). | A change within a second of a click or key press in that frame counts as the user's (rule 3), even when the player made it. Hence "not right after". |
-| "If it keeps doing that (more than five times in ten seconds), Doublespeed lets it be until the next video; a shortcut takes it back." | `RESET_LIMIT` 5 and `RESET_WINDOW_MS` 10 s (`speed-rules.ts:15–16`, `:197`); a new source starts over; rule 5 takes a source back from the site (`speed-rules.ts:154`). | |
+| "if one changes it when you haven't just clicked or pressed a key, Doublespeed sets it back" | Rule 4 re-sets the target speed (`speed-rules.ts:193–198`). | A change within a second of a click or key press in that frame counts as the user's (rule 3), even when the player made it. Hence "not right after". |
+| "A site that keeps at it (more than five times in ten seconds) is left alone until the next video, or until you use a shortcut." | `RESET_LIMIT` 5 and `RESET_WINDOW_MS` 10 s (`speed-rules.ts:15–16`, `:197`); a new source starts over; rule 5 takes a source back from the site (`speed-rules.ts:154`). | |
 | "Alt+. faster and Alt+, slower, in 0.25× steps. Alt+R goes to 1×, and from 1× back to your default." | The commands in `wxt.config.ts`; `stepSpeed` moves to the next 0.25 step within 0.25×–4× (`src/lib/speed.ts`); `commandedSpeed` (`src/lib/speed-commands.ts`). | They do nothing on a disabled site or to live videos (rule 5); the text doesn't say they do. |
 | "Change them at chrome://extensions/shortcuts" (Chrome); "open about:addons, click the gear button, and choose Manage Extension Shortcuts" (AMO) | Chrome's page. Firefox, checked 2026-11-18 on 128.14 ESR and 160.0: about:addons' gear button ("Tools for all add-ons") has "Manage Extension Shortcuts"; the options page shows those steps on 128 (`optionsShortcutsSteps`) and a "Change shortcuts" button on 160, which has `commands.openShortcutSettings()` (`entrypoints/options/App.svelte:38–42`). | |
 | "after a shortcut, or the popup's −/+ for the tab, a small label shows the new speed on each changed player in view" | Each video `control()` changed gets a label (`content.ts:64`), unless it's out of view or hidden (`src/content/speed-label.ts:139–151`). | Not the default speed's −/+, nor the site's own menu: neither goes through rule 5 (SPEC §3.2, rule 5). |
-| "Pin Doublespeed's toolbar icon to see the tab's speed on it." | The badge (SPEC §1; `src/background/tab-badges.ts`). | It doesn't assume the icon is on the toolbar already. |
+| "Pin the toolbar icon to see the tab's speed on it." | The badge (SPEC §1; `src/background/tab-badges.ts`). | It doesn't assume the icon is on the toolbar already. |
 | "turn it off for a site from the popup. music.youtube.com starts off." | The popup's switch writes the site's exact-hostname rule (`src/lib/site-switch.ts`, `entrypoints/popup/App.svelte:196`); music.youtube.com is seeded on install (`src/lib/settings.ts:43`). | Seeding is skipped when sync brings settings from another browser (SPEC §4); that user's own list applies. |
 | "2× unless you set another in the popup, from 0.25× to 4×" | `speed.ts:8–12`; the popup's default −/+. | |
-| "Live streams are usually left alone: Doublespeed skips anything that reports no end." | A live video is one whose duration is `Infinity`, left alone for good, rewound or not (`speed-rules.ts:67`, `:106`; SPEC §3.1). | "Usually", because a live player can report a finite duration and is then sped up like any video: hls.js does by default (`liveDurationInfinity: false` in its `docs/API.md`). Checked on the live fixture only, not on a real site. |
+| "Live streams that report no end are left alone." | A live video is one whose duration is `Infinity`, left alone for good, rewound or not (`speed-rules.ts:67`, `:106`; SPEC §3.1). | A live player can report a finite duration and is then sped up like any video: hls.js does by default (`liveDurationInfinity: false` in its `docs/API.md`). Hence "that report no end". Checked on the live fixture only, not on a real site. |
 | The privacy paragraph | No `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` or `sendBeacon` anywhere in `entrypoints/` or `src/`. Page address: `frame-settings.ts:59`, `background.ts:24`, `App.svelte:87`. Source address: `src/content/speed-engine.ts:79–84`. Input time: `src/content/user-input.ts:10`. Settings in `storage.sync` (SPEC §4). | |
 | Storage and host permission justifications | SPEC §4's two tables; the reads as for the privacy paragraph. | |
 | Test instructions | `popupSiteOn`, `popupSiteOff`, `badgeOff`, `popupNoAccess` and `popupGrantAccess` in `messages.json`; a speed that isn't whole drops its × on the badge (`src/lib/tab-speed.ts:116–117`); the popup drops `www.` (`src/lib/site-patterns.ts:17–20`); turning a site off puts back each video's speed from before (rule 6, `speed-rules.ts:135`). | |
@@ -321,12 +333,17 @@ not quoted):
   label), never its pictures or sound. Information about the content a user requests is, in FAQ 2's
   own list, web browsing activity, so the video addresses go under web history. This is the closest
   call: if a reviewer reads "videos" as the video elements Doublespeed controls, tick it and add it
-  to `PRIVACY.md`.
+  to `PRIVACY.md`. One edge: a video whose source is a `data:` address carries its own bytes in
+  that address, which Doublespeed keeps as the source key like any other (`speed-engine.ts:78`) and
+  never decodes. How Google classes that is unverified; look at this box again before pasting.
 
-**What follows from it:** "collects nothing" is gone from the description, `PRIVACY.md` and the
-README. `PRIVACY.md` names the two data types, as what the store's form declares from 1.0.0, since 0.1.1's
-form, in review as this merges, has neither ticked. ADR-0006 has a dated amendment; its title and
-the rest of its text stay as decided, as ADRs do.
+**What follows from it:** "collects nothing" is gone from 1.0.0's description and from the README.
+`PRIVACY.md`, SPEC §6 and ADR-0006 (a dated amendment; ADRs keep their decided text) change on the
+day 1.0.0 is uploaded, not before: the policy URL of 0.1.1, in review now, is `PRIVACY.md` on main,
+and a policy naming two data types beside a form with no box ticked is the discrepancy the FAQ
+quoted above warns of. Their text is ready on the `privacy-1-0-0` branch
+([Still open](#still-open)). 0.1.1 itself already handles both data types with neither declared;
+that mismatch stands until 1.0.0's form replaces it.
 
 [faq-local]: https://developer.chrome.com/docs/webstore/program-policies/user-data-faq#3_does_an_extension_need_to_disclose_user_data_handling_if_the_data_is_only_processed_or_stored_locally_on_a_users_device
 [faq-handle]: https://developer.chrome.com/docs/webstore/program-policies/user-data-faq#ques_2
@@ -335,7 +352,7 @@ the rest of its text stay as decided, as ADRs do.
 
 ### Limited Use
 
-`PRIVACY.md` must carry the statement, and now does:
+`PRIVACY.md` must carry the statement, and its upload-day version does:
 
 - [Program Policies, Limited Use][cws-limited]: "An affirmative statement that your use of the data
   complies with the Limited Use restrictions must be disclosed on a website belonging to your
@@ -350,8 +367,8 @@ the rest of its text stay as decided, as ADRs do.
 
 The homepage is the repository, whose README links `PRIVACY.md`: one click away. The statement
 says the data is used only to control the speed of videos, never sent anywhere by Doublespeed, and
-not sold, transferred to third parties, read by any person, or used for advertising or credit
-decisions: the four elements the FAQ lists (allowed use, allowed transfer, prohibited advertising,
+not sold, transferred to third parties, seen by anyone but the user, or used for advertising or
+credit decisions: the four elements the FAQ lists (allowed use, allowed transfer, prohibited advertising,
 prohibited human interaction).
 
 [cws-limited]: https://developer.chrome.com/docs/webstore/program-policies/policies#limited_use
@@ -365,19 +382,25 @@ and how it will be used. Obtain the user's affirmative and informed consent for 
 [announcement][cws-2026] adds that this applies "regardless of whether the data is closely related
 to the extension's single purpose". Before installation, the only places to disclose are the
 listing and the browser's install prompt, so the description's privacy paragraph says what
-Doublespeed reads and why, the privacy fields declare it, and installing is the consent.
+Doublespeed reads and why, and the privacy fields declare it. Whether that is enough, Google's own
+pages disagree:
 
-[User Data FAQ][faq-prominent], 10, says the opposite: "The prominent disclosure and consent must
-occur within the Product's user interface. Disclosures in the Chrome Web Store description or
-inline installation page do not satisfy this requirement." That answer is on the live FAQ beside
-answer 3 on locally handled data, which is new with the 2026 change, so it can't be read as
-superseded. The two don't fit together: a screen in the product's own interface can only show
-after installation, and the policy asks for disclosure before it. Ticking the two data boxes
-declares that Doublespeed handles user data, which is what brings answer 10 into play.
+- [Troubleshooting, "User data policy - prominent disclosure"][cws-nickel] (notification Purple
+  Nickel): "Prominent disclosure of data collection in the extension's Chrome Web Store listing is
+  sufficient."
+- [User Data FAQ][faq-prominent], 10: "The prominent disclosure and consent must occur within the
+  Product's user interface. Disclosures in the Chrome Web Store description or inline installation
+  page do not satisfy this requirement." That answer is on the live FAQ beside answer 3 on locally
+  handled data, which is new with the 2026 change, so it can't be read as superseded. It doesn't
+  fit the policy's own words: a screen in the product's interface can only show after installation.
 
-Doublespeed has no such screen (ADR-0005: no welcome tab). Going to review without one is a known
-risk, for the owner to accept or not: [Still open](#still-open).
+Doublespeed handles user data in Google's sense whether or not the boxes are ticked; ticking them
+makes that visible to a reviewer, who may go by answer 10. It has no screen of its own (ADR-0005:
+no welcome tab), and the content script starts noting the input time as soon as a page loads
+(`entrypoints/content.ts:16`), before any of its interface shows. Going to review like that is a
+known risk, for the owner to accept or not: [Still open](#still-open).
 
+[cws-nickel]: https://developer.chrome.com/docs/webstore/troubleshooting#udp-prominent-disclosure
 [cws-disclosure]: https://developer.chrome.com/docs/webstore/program-policies/policies#disclosure_requirements
 [faq-prominent]: https://developer.chrome.com/docs/webstore/program-policies/user-data-faq#ques_10
 
@@ -421,6 +444,11 @@ package, so [`README.md`](../README.md) has them.
 
 Only the owner can do or decide these.
 
+- **Private windows on Firefox, before the AMO submission:**
+  [#32](https://github.com/GWSoT/doublespeed/issues/32).
+- **`PRIVACY.md`, on the day 1.0.0 is uploaded:** merge the `privacy-1-0-0` branch (the new
+  `PRIVACY.md`, SPEC §6 and ADR-0006's amendment), so the policy and the form change together
+  ([Data usage](#data-usage)).
 - **In the Chrome dashboard, once 0.1.1's review ends:** upload 1.0.0, paste the text above, tick
   **Web history** and **User activity**, and check that the form's definitions still read as noted
   in [Data usage](#data-usage).
@@ -429,12 +457,14 @@ Only the owner can do or decide these.
   Re-render and commit it before 1.0.0? Recommended: yes, so it shows the popup as it is. Nothing
   in this text depends on it.
 - **An in-product disclosure?** Should Doublespeed show its own data disclosure and ask for consent
-  (a welcome tab or a first-run popup panel)? The policy text asks for disclosure "prior to
-  installation", which the listing gives, but FAQ 10, still on the live page, says the listing
-  doesn't count ([Disclosure before installation](#disclosure-before-installation)). Recommended:
-  go to review without one, and accept that a reviewer who goes by FAQ 10 can reject 1.0.0 for it.
-  Nothing leaves the browser, a screen would undo ADR-0005, and a rejection costs one more review
-  (about a day so far). If a review asks for one, it gets its own ADR.
+  (a welcome tab or a first-run popup panel)? Google's troubleshooting page says disclosure in the
+  listing is sufficient, and FAQ 10, still live, says it isn't
+  ([Disclosure before installation](#disclosure-before-installation)). Recommended: go to review
+  without one. Nothing leaves the browser, and a screen would undo ADR-0005. The risk to accept: a
+  reviewer who goes by FAQ 10 can reject 1.0.0 for it, which would be this publisher's second
+  policy rejection, and the Program Policies' Repeat Abuse section says "Serious or repeated
+  violations … will result in the suspension of your developer account". If a review asks for a
+  screen, it gets its own ADR.
 - **The source package, again at 1.0.0:** the rebuild in
   [Source package, checked](#source-package-checked) used 0.1.1's code. Before submitting to AMO,
   rebuild from the 1.0.0 source zip the same way and compare it with the 1.0.0 package.
