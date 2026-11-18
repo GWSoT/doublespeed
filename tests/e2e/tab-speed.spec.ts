@@ -5,7 +5,17 @@
  * frames come from `127.0.0.1`.
  */
 import type { BrowserContext, Frame, Page } from '@playwright/test';
-import { badge, expect, frameByUrl, openPopup, pressShortcut, tabIdOf, tabReports, test } from './extension';
+import {
+  badge,
+  countFrameDocQuestions,
+  expect,
+  frameByUrl,
+  openPopup,
+  pressShortcut,
+  tabIdOf,
+  tabReports,
+  test,
+} from './extension';
 
 const DEFAULT = 2;
 
@@ -249,6 +259,36 @@ test.describe("the popup's −/+ for this tab", () => {
     popup = await openPopup(context, page);
     await expect(shown(popup)).toHaveText('Off');
     await expect(faster(popup)).toBeDisabled();
+  });
+});
+
+test.describe('asking frames which document they hold', () => {
+  test('a page load asks no more than one check per new document', async ({ context, page }) => {
+    // Issue #30. Each report from a new document has the background ask every frame with a
+    // report so far, and the reports of a burst share a check, so it usually comes to about one
+    // question per frame. At worst the 11 reports come one by one, each with its own check:
+    // 1 + 2 + … + 11 questions. Over-asking (about 100 questions for these ten frames, in #29's
+    // review) only showed in a browser.
+    const asked = await countFrameDocQuestions(context);
+    await page.goto('/plain.html');
+    await page.evaluate(() => {
+      for (let i = 0; i < 10; i++) {
+        const frame = document.createElement('iframe');
+        frame.src = `http://127.0.0.1:3211/plain.html?${i}`;
+        document.body.append(frame);
+      }
+    });
+    await expect.poll(() => reportCount(context, page)).toBe(11);
+    // Until the questions stop.
+    const settled = async () => {
+      const before = await asked();
+      await page.waitForTimeout(500);
+      return (await asked()) === before;
+    };
+    await expect.poll(settled).toBe(true);
+    const count = await asked();
+    expect(count).toBeGreaterThanOrEqual(11);
+    expect(count).toBeLessThanOrEqual((11 * 12) / 2);
   });
 });
 

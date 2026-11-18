@@ -46,7 +46,7 @@ export interface FrameDocQuery {
 
 /**
  * From the popup, before it reads a tab's reports: drop the stale ones. Answered once every
- * frame has answered, or after half a second.
+ * frame has answered, or half a second after they're asked.
  */
 export interface CheckTabMessage {
   type: 'checkTab';

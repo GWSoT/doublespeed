@@ -311,6 +311,27 @@ describe('the popup’s check', () => {
     await vi.waitFor(() => expect(fake.stored()).toEqual({}));
   });
 
+  it('starts its CHECK_WAIT_MS once it asks, however long the reports queued before it take (issue #30)', async () => {
+    // 16 reports queued at 15 ms per storage and badge call take over 700 ms, longer than the wait.
+    fake = fakeBrowser({ storageMs: 15 });
+    badges = createTabBadges();
+    fake.frames.set(0, 'old-top');
+    badges.report(TAB, 0, 'old-top', OFF);
+    await vi.waitFor(() => expect(fake.badge()).toBe('off'));
+    await settle();
+
+    // The tab moved on through a browser page; the new page's frames report, and the popup opens.
+    fake.frames.set(0, 'new-top');
+    for (let frameId = 1; frameId <= 16; frameId++) {
+      fake.frames.set(frameId, `player-${frameId}`);
+      badges.report(TAB, frameId, `player-${frameId}`, at(2));
+    }
+    await badges.check(TAB);
+    expect(fake.stored()).not.toHaveProperty('0');
+    expect(Object.keys(fake.stored())).toHaveLength(16);
+    expect(fake.badge()).toBe('2×');
+  });
+
   it('answers at once for a tab with no reports', async () => {
     await badges.check(TAB);
     expect(fake.asked).toEqual([]);
