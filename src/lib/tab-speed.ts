@@ -95,7 +95,8 @@ export function applyReport(frames: TabFrames, frameId: number, doc: string, sta
  * (`FrameDocQuery`). When that's another document, or none, the withdrawal for `doc` never
  * arrived, so its report goes; and the report of the document the frame does hold takes its
  * place, since `doc`'s may have arrived after it and replaced it. A report that came in since
- * the question, from any document, stays.
+ * the question, from any document, stays. The caller passes `null` for an answer that may be out
+ * of date, which puts nothing back.
  */
 export function applyAnswer(
   frames: TabFrames,

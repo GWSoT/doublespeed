@@ -8,7 +8,7 @@ const OFF: FrameState = { off: true, video: null };
 
 /** A frame that takes its time to answer; `answer` lets it. */
 interface Busy {
-  answer(doc: string | null): void;
+  answer(doc: string | null, state?: FrameState | null): void;
 }
 
 /** A frame's document, with the report it has sent from it. */
@@ -60,7 +60,7 @@ function fakeBrowser({ storageMs = 0 } = {}) {
         if (frame === undefined) return Promise.reject(new Error('Could not establish connection. Receiving end does not exist.'));
         if (typeof frame === 'string') return Promise.resolve(held(frame));
         if ('doc' in frame) return Promise.resolve(held(frame.doc, frame.state));
-        return new Promise((resolve) => (frame.answer = (doc) => resolve(held(doc))));
+        return new Promise((resolve) => (frame.answer = (doc, state) => resolve(held(doc, state))));
       },
     },
   });
@@ -230,6 +230,27 @@ describe('a departed page’s report arriving after its replacement’s (issue #
     await settle();
     expect(fake.stored()).toEqual({ 0: 'new-top' });
     expect(fake.badge()).toBe('2×');
+  });
+
+  it('doesn’t put back a report its frame withdrew while the answer was on its way', async () => {
+    fake.frames.set(0, 'old-top');
+    badges.report(TAB, 0, 'old-top', at(1));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0]));
+    await settle();
+
+    const top = fake.busy(0);
+    badges.report(TAB, 0, 'new-top', at(2));
+    badges.report(TAB, 0, 'old-top', at(1.5));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    // The new page answers with its report, then its video goes and it withdraws. The withdrawal
+    // gets in first: it finds the old page's report in its place and removes nothing.
+    badges.report(TAB, 0, 'new-top', null);
+    await settle();
+    top.answer('new-top', at(2));
+    await settle();
+    expect(fake.stored()).toEqual({});
+    expect(fake.badge()).toBe('');
   });
 });
 
