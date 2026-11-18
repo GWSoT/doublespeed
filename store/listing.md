@@ -15,8 +15,8 @@ The name and the one-line summary come from the manifest (`extName` and `extDesc
 **Description:** Google's keyword-spam policy ([troubleshooting][keyword-spam]) rules out lists
 of sites "without substantial added value" and "unnatural repetition of the same keyword more
 than 5 times". A bullet naming six sites got 0.1.0 rejected ("Yellow Argon"), so our own rule is
-stricter: name no sites it works on, except one for a reason (music.youtube.com below), and use
-no keyword more than five times. The text below is what 0.1.1 went to review with;
+stricter: name no sites, except music.youtube.com to say it starts off there, and use no keyword
+more than five times. The text below is what 0.1.1 went to review with;
 [Before the next upload](#before-the-next-upload) says what to change in it.
 
 [keyword-spam]: https://developer.chrome.com/docs/webstore/troubleshooting/#keyword-stuffing
@@ -64,8 +64,10 @@ Doublespeed controls the playback speed of videos on web pages. It plays every v
 
 **Remote code:** No, I am not using remote code.
 
-**Data usage:** tick none of the data types. Tick all three certifications (no selling or
-transfer, no use unrelated to the single purpose, no use for credit decisions).
+**Data usage:** tick none of the data types. The form asks what is collected, and nothing is: the
+page address is only compared with the site list in memory and never kept, and the privacy policy
+says so. Tick all three certifications (no selling or transfer, no use unrelated to the single
+purpose, no use for credit decisions).
 
 **Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. Google
 requires one from every extension that handles user data, even only on the device
@@ -92,15 +94,20 @@ by withdrawing that review:
 - **Description, keyword count:** "video" is in it seven times and "speed" six, not counting
   "Doublespeed"; bring each to five or fewer. 0.1.0 had six of each and was flagged only for its
   list; 0.1.1's rewritten first bullet added the seventh "video".
-- **Description, claims:** two have exceptions. "Every video on the web at 2× from the first
-  frame" misses a player defined after load with no later DOM change or click (SPEC §5's known
-  gap). "Doublespeed sets it back" stops once a site resets one source more than ~5 times in
-  ~10 s (SPEC §3.2, rule 4). Word them so they hold.
+- **Description, claims:** three have exceptions. Word them so they hold.
+  - "every video on the web at 2× from the first frame" misses sites where the user withheld its
+    access (SPEC §2.2), and a custom-element player defined after load that autoplays with no
+    later DOM change or click (SPEC §5's known gap).
+  - "Doublespeed sets it back" stops once a site resets the speed of the same source more than
+    ~5 times in ~10 s (SPEC §3.2, rule 4).
+  - "a small label shows on the video when you change it" holds only for Doublespeed's shortcuts
+    and popup, not the site's own speed menu (SPEC §3.1, speed label).
 - **Test instructions:** clicking the toolbar icon opens the popup; turning the site off is the
   popup's switch. Say both steps.
 - **addons.mozilla.org:** the description's shortcut line points to
-  `chrome://extensions/shortcuts`. On Firefox, say what the options page says: open
-  about:addons, click the gear button, and choose Manage Extension Shortcuts.
+  `chrome://extensions/shortcuts`. For Firefox, give the steps the options page shows where
+  Firefox can't open the settings itself: open about:addons, click the gear button, and choose
+  Manage Extension Shortcuts.
 - **Host permission justification:** "Nothing from the page is stored" reads as if nothing is
   kept, while the storage justification says each tab's video speed is. Make the two agree with
   [`PRIVACY.md`](../PRIVACY.md).
