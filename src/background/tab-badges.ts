@@ -49,7 +49,7 @@ export function createTabBadges(): TabBadges {
   const cache = new Map<number, TabFrames>();
   /** Work per tab runs in order, so two quick reports can't both build on the same old state. */
   const queues = new Map<number, Promise<void>>();
-  /** Each tab's next check, until it starts: what's asked for before then shares it. */
+  /** Each tab's next check, until it reads the tab's reports: what's asked for before then shares it. */
   const nextCheck = new Map<number, Promise<void>>();
 
   function enqueue(tabId: number, work: () => Promise<void>): Promise<void> {

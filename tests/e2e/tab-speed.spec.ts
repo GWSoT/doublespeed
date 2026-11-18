@@ -326,8 +326,11 @@ test.describe('with the back/forward cache', () => {
   }
 
   test('a page whose iframes report comes back from the cache with every report', async ({ context, page }) => {
+    const docs = async () =>
+      Object.values(await tabReports(context, page)).map((report) => (report as { doc: string }).doc);
     await page.goto('/iframes.html?bfcache');
     await expect.poll(() => reportCount(context, page)).toBe(6);
+    const before = await docs();
     await mark(page);
 
     await page.goto('/empty.html?bfcache');
@@ -338,6 +341,7 @@ test.describe('with the back/forward cache', () => {
     const popup = await openPopup(context, page);
     await expect(thisTab(popup)).toHaveText('2×');
     expect(await reportCount(context, page)).toBe(6);
+    expect((await docs()).filter((doc) => before.includes(doc))).toEqual([]);
   });
 
   test('a page in the cache doesn’t answer for the page that replaced it', async ({ context, page }) => {

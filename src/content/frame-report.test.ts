@@ -125,6 +125,20 @@ describe('reportFrame', () => {
     expect(ask()).toBe(sent[1]!.doc);
   });
 
+  it('listens for every lifecycle event on the window, in the capture phase', () => {
+    const win = fakeWindow({ prerendering: true });
+    const listening = vi.spyOn(win, 'addEventListener');
+    reportFrame(() => null, new AbortController().signal, win as unknown as Window);
+    const types = listening.mock.calls.map(([type, , options]) => [type, (options as AddEventListenerOptions).capture]);
+    expect(types).toEqual(
+      expect.arrayContaining([
+        ['pagehide', true],
+        ['pageshow', true],
+        ['prerenderingchange', true],
+      ]),
+    );
+  });
+
   it('hears pagehide and pageshow even when a page script stops them', async () => {
     const frame = start(null);
     frame.set(VIDEO);
@@ -147,8 +161,9 @@ describe('reportFrame', () => {
     await tick();
     expect(sent).toEqual([]);
 
+    // Fired at the document, the event reaches the window first, in the capture phase.
     frame.win.document.prerendering = false;
-    frame.win.document.dispatchEvent(new Event('prerenderingchange'));
+    frame.win.dispatchEvent(new Event('prerenderingchange'));
     await tick();
     expect(sent).toEqual([{ type: 'frameState', doc: expect.any(String), state: VIDEO }]);
   });
