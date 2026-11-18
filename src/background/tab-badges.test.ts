@@ -330,13 +330,6 @@ describe('the popup’s check', () => {
     expect(fake.stored()).not.toHaveProperty('0');
     expect(Object.keys(fake.stored())).toHaveLength(16);
     expect(fake.badge()).toBe('2×');
-
-    // Dropping the stale report starts one more check: let it finish inside this test.
-    let asked: number;
-    do {
-      asked = fake.asked.length;
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    } while (fake.asked.length !== asked);
   });
 
   it('answers at once for a tab with no reports', async () => {
