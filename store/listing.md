@@ -1,9 +1,9 @@
 # Store listing
 
 What goes into the Chrome Web Store's developer dashboard, field by field. The item is
-`adocdalonhmgamdohammiefgchljljef`, published by GWOSTIK; 0.1.0 went to review, unlisted, on
-2026-11-17. The images are in
-[`images/`](images/), made by `make store-images`; the store icon is
+`adocdalonhmgamdohammiefgchljljef`, published by GWOSTIK. 0.1.0 went to review, unlisted, on
+2026-11-17 and was rejected the next day for the description (below); 0.1.1 went to review on
+2026-11-18 with the fixed text. The images are in [`images/`](images/), made by `make store-images`; the store icon is
 [`public/icon/128.png`](../public/icon/128.png), made by `make icons`. addons.mozilla.org reuses
 the same text in Phase 3.
 
@@ -12,12 +12,16 @@ The name and the one-line summary come from the manifest (`extName` and `extDesc
 
 ## Store listing tab
 
-**Description:**
+**Description:** no lists of the sites it works on. 0.1.0 was rejected on 2026-11-18 for keyword
+stuffing ("Yellow Argon") over one bullet that named six sites; Google's
+[troubleshooting page](https://developer.chrome.com/docs/webstore/troubleshooting/#keyword-stuffing)
+gives exactly that as its example. Naming one site for a reason, like music.youtube.com below,
+isn't a list: the policy targets lists "without substantial added value".
 
 ```text
 Doublespeed plays every video on the web at 2× from the first frame, so you never have to hunt for a speed menu again.
 
-• Every video, everywhere: YouTube, Netflix, Vimeo, Twitch, X, Reddit, news sites, embedded players, and players with no speed menu at all.
+• Every video, everywhere: video and streaming sites, social feeds, news sites, embedded players, and players with no speed menu at all.
 • Your choice wins: change a video's speed with the site's own menu or with the shortcuts, and that video keeps it. The next video starts at your default again.
 • Sites can't quietly reset it: when a player puts itself back to 1×, Doublespeed sets it back.
 • Shortcuts: Alt+. faster, Alt+, slower (0.25× steps), Alt+R to switch between 1× and your default. Change them at chrome://extensions/shortcuts.
@@ -33,8 +37,7 @@ Private by design: Doublespeed collects nothing and makes no network requests. Y
 **Category:** Tools. **Language:** English.
 
 **Homepage URL:** `https://github.com/GWSoT/doublespeed`. **Support URL:**
-`https://github.com/GWSoT/doublespeed/issues`. Both with the next upload, like the privacy policy
-URL.
+`https://github.com/GWSoT/doublespeed/issues`.
 
 **Graphic assets:**
 - **Store icon:** `public/icon/128.png`.
@@ -62,8 +65,7 @@ Doublespeed controls the playback speed of videos on web pages. It plays every v
 transfer, no use unrelated to the single purpose, no use for credit decisions).
 
 **Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. The store
-asks for one only when user data is collected, and none is, but it costs nothing to give. 0.1.0
-went to review without it; add it with the next upload rather than withdrawing that review.
+asks for one only when user data is collected, and none is, but it costs nothing to give.
 
 ## Distribution tab
 
