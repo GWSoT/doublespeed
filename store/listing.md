@@ -126,6 +126,9 @@ before that upload.
   at the latest. The only addresses it stores are the site list's patterns: the sites it's off on,
   music.youtube.com included. If any of them is ticked, reword "collects nothing" in the description
   and in PRIVACY.md to match.
+- **Limited Use:** check whether the User Data Policy wants PRIVACY.md to state, beyond the
+  dashboard's three certifications, that Doublespeed's use of user data meets its Limited Use
+  requirements, and add the statement if so.
 - **Test instructions:** clicking the toolbar icon opens the popup; turning the site off is the
   popup's switch. Say both steps.
 - **addons.mozilla.org:** the description's shortcut line points to
