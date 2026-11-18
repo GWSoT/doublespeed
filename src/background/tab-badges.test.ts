@@ -11,9 +11,17 @@ interface Busy {
   answer(doc: string | null): void;
 }
 
+/** A frame's document, with the report it has sent from it. */
+interface Held {
+  doc: string;
+  state: FrameState | null;
+}
+
 /**
  * The extension API as the background uses it: `storage.session`, the badge, and the tab's
  * frames, each holding a document (or busy, or gone). A frame not in `frames` doesn't answer.
+ * A frame given only its document answers that it has sent no report from it: the background
+ * reads the report in an answer only when the document isn't the one it asked about.
  */
 function fakeBrowser({ storageMs = 0 } = {}) {
   const session = new Map<string, unknown>();
@@ -21,9 +29,12 @@ function fakeBrowser({ storageMs = 0 } = {}) {
   const later = <T>(value: T): Promise<T> =>
     storageMs ? new Promise((resolve) => setTimeout(() => resolve(value), storageMs)) : Promise.resolve(value);
   const badge = new Map<number, string>();
-  const frames = new Map<number, string | Busy>();
+  const frames = new Map<number, string | Held | Busy>();
   const asked: number[] = [];
   const messages: unknown[] = [];
+  /** The frame's answer to `frameDoc`. */
+  const held = (doc: string | null, state: FrameState | null = null) =>
+    doc === null ? null : { type: 'frameState', doc, state };
 
   vi.stubGlobal('browser', {
     storage: {
@@ -47,8 +58,9 @@ function fakeBrowser({ storageMs = 0 } = {}) {
         asked.push(frameId);
         const frame = frames.get(frameId);
         if (frame === undefined) return Promise.reject(new Error('Could not establish connection. Receiving end does not exist.'));
-        if (typeof frame === 'string') return Promise.resolve(frame);
-        return new Promise((resolve) => (frame.answer = resolve));
+        if (typeof frame === 'string') return Promise.resolve(held(frame));
+        if ('doc' in frame) return Promise.resolve(held(frame.doc, frame.state));
+        return new Promise((resolve) => (frame.answer = (doc) => resolve(held(doc))));
       },
     },
   });
@@ -202,6 +214,25 @@ describe('a page back from the back/forward cache', () => {
   });
 });
 
+describe('a departed page’s report arriving after its replacement’s (issue #30)', () => {
+  it('doesn’t cost the live report', async () => {
+    fake.frames.set(0, 'old-top');
+    badges.report(TAB, 0, 'old-top', at(1));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0]));
+    await settle();
+
+    // The tab moved on. The new page reports first; the old page's last report, sent before it
+    // left, comes after it.
+    fake.frames.set(0, { doc: 'new-top', state: at(2) });
+    badges.report(TAB, 0, 'new-top', at(2));
+    badges.report(TAB, 0, 'old-top', at(1.5));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+    await settle();
+    expect(fake.stored()).toEqual({ 0: 'new-top' });
+    expect(fake.badge()).toBe('2×');
+  });
+});
+
 describe('a busy frame', () => {
   it('holds up no report, and its late answer still counts', async () => {
     fake.frames.set(0, 'old-top');
@@ -309,6 +340,27 @@ describe('the popup’s check', () => {
     await vi.advanceTimersByTimeAsync(0);
     vi.useRealTimers();
     await vi.waitFor(() => expect(fake.stored()).toEqual({}));
+  });
+
+  it('starts its CHECK_WAIT_MS once it asks, however long the reports queued before it take (issue #30)', async () => {
+    // 16 reports queued at 15 ms per storage and badge call take over 700 ms, longer than the wait.
+    fake = fakeBrowser({ storageMs: 15 });
+    badges = createTabBadges();
+    fake.frames.set(0, 'old-top');
+    badges.report(TAB, 0, 'old-top', OFF);
+    await vi.waitFor(() => expect(fake.badge()).toBe('off'));
+    await settle();
+
+    // The tab moved on through a browser page; the new page's frames report, and the popup opens.
+    fake.frames.set(0, 'new-top');
+    for (let frameId = 1; frameId <= 16; frameId++) {
+      fake.frames.set(frameId, `player-${frameId}`);
+      badges.report(TAB, frameId, `player-${frameId}`, at(2));
+    }
+    await badges.check(TAB);
+    expect(fake.stored()).not.toHaveProperty('0');
+    expect(Object.keys(fake.stored())).toHaveLength(16);
+    expect(fake.badge()).toBe('2×');
   });
 
   it('answers at once for a tab with no reports', async () => {

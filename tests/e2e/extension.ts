@@ -242,3 +242,23 @@ export async function tabReports(context: BrowserContext, target: Page | number)
     return ((await chrome.storage.session.get(key))[key] ?? {}) as Record<string, unknown>;
   }, tabId);
 }
+
+/**
+ * Counts the `frameDoc` questions the background asks frames from now on (SPEC §4,
+ * `tab:<tabId>`), by wrapping `tabs.sendMessage` in its service worker: on Chrome, WXT's
+ * `browser` is `chrome`. Returns the count so far.
+ */
+export async function countFrameDocQuestions(context: BrowserContext): Promise<() => Promise<number>> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  await worker.evaluate(() => {
+    const counter = globalThis as unknown as { frameDocQuestions: number };
+    counter.frameDocQuestions = 0;
+    const tabs = chrome.tabs as unknown as { sendMessage(...args: unknown[]): unknown };
+    const send = tabs.sendMessage.bind(tabs);
+    tabs.sendMessage = (...args: unknown[]) => {
+      if ((args[1] as { type?: unknown } | undefined)?.type === 'frameDoc') counter.frameDocQuestions++;
+      return send(...args);
+    };
+  });
+  return () => worker.evaluate(() => (globalThis as unknown as { frameDocQuestions: number }).frameDocQuestions);
+}

@@ -7,13 +7,17 @@
  * A frame withdraws its report on `pagehide`, but that message can go missing: it does when the
  * tab moves to a browser page, where nothing runs to replace the report (issue #26). So the
  * background asks each frame with a report whether it still holds the document that sent it,
- * and applies the missing withdrawal when it doesn't. It asks when a report comes from a
- * document the tab doesn't hold yet for that frame, when a withdrawal removes a report, and when
- * the popup opens.
+ * and applies the missing withdrawal when it doesn't. The frame answers with the report of the
+ * document it does hold, which takes the stale one's place: the stale one may have arrived after
+ * it and replaced it (issue #30). The background asks when a report comes from a document the
+ * tab doesn't hold yet for that frame, when a withdrawal removes a report, and when the popup
+ * opens.
  */
 import {
+  applyAnswer,
   applyReport,
   badgeText,
+  isFrameStateMessage,
   parseTabFrames,
   tabKey,
   tabSpeed,
@@ -27,9 +31,9 @@ const SPEED_COLOR = '#7c3aed';
 const OFF_COLOR = '#6b6775';
 
 /**
- * How long the popup waits for the frames' answers before it shows the tab's speed. A frame
- * with nothing to answer fails at once, so only a live frame that's busy takes longer, and its
- * answer still counts when it comes.
+ * How long the popup waits for the frames' answers, once they're asked, before it shows the
+ * tab's speed. A frame with nothing to answer fails at once, so only a live frame that's busy
+ * takes longer, and its answer still counts when it comes.
  */
 export const CHECK_WAIT_MS = 500;
 
@@ -37,11 +41,20 @@ export interface TabBadges {
   report(tabId: number, frameId: number, doc: string, state: FrameState | null): void;
   /**
    * Asks every frame with a report in the tab whether it still holds that report's document,
-   * and drops the reports whose frame doesn't. Resolves once all have answered, or after
-   * `CHECK_WAIT_MS`; a later answer still drops its report.
+   * and drops the reports whose frame doesn't. It asks once the reports queued before it are in.
+   * Resolves once all have answered, or `CHECK_WAIT_MS` after they're asked; a later answer still
+   * counts.
    */
   check(tabId: number): Promise<void>;
   forget(tabId: number): void;
+}
+
+/** A check of a tab's reports (`checkTab`). */
+interface Check {
+  /** Resolves once the check has read the tab's reports, as it asks their frames. */
+  asking: Promise<void>;
+  /** Resolves once every frame asked has answered, or can't. */
+  answered: Promise<void>;
 }
 
 export function createTabBadges(): TabBadges {
@@ -50,7 +63,7 @@ export function createTabBadges(): TabBadges {
   /** Work per tab runs in order, so two quick reports can't both build on the same old state. */
   const queues = new Map<number, Promise<void>>();
   /** Each tab's next check, until it reads the tab's reports: what's asked for before then shares it. */
-  const nextCheck = new Map<number, Promise<void>>();
+  const nextCheck = new Map<number, Check>();
 
   function enqueue(tabId: number, work: () => Promise<void>): Promise<void> {
     const run = (queues.get(tabId) ?? Promise.resolve()).then(work).catch(() => {
@@ -72,19 +85,17 @@ export function createTabBadges(): TabBadges {
   }
 
   /**
-   * Applies one frame's report, or its withdrawal (`null`), and shows the result. `changed` runs
-   * in the same turn of the queue, with the reports as they were, when something changed.
+   * Applies `step` to the tab's reports, in turn, and shows the result. `changed` runs in the
+   * same turn of the queue, with the reports as they were, when something changed.
    */
-  function apply(
+  function update(
     tabId: number,
-    frameId: number,
-    doc: string,
-    state: FrameState | null,
+    step: (frames: TabFrames) => TabFrames,
     changed?: (before: TabFrames) => void,
   ): Promise<void> {
     return enqueue(tabId, async () => {
       const frames = await load(tabId);
-      const next = applyReport(frames, frameId, doc, state);
+      const next = step(frames);
       if (next === frames) return;
       cache.set(tabId, next);
       const key = tabKey(tabId);
@@ -104,62 +115,73 @@ export function createTabBadges(): TabBadges {
     await browser.action.setBadgeText({ tabId, text });
   }
 
-  /** Asks one frame whether it still holds `doc`; if not, applies the withdrawal it never sent. */
+  /**
+   * Asks one frame whether it still holds `doc`. If not, applies the withdrawal it never sent,
+   * and puts back the report of the document it holds (`applyAnswer`).
+   */
   async function verify(tabId: number, frameId: number, doc: string): Promise<void> {
     const query: FrameDocQuery = { type: 'frameDoc' };
-    const holds = await Promise.resolve()
+    const answer = await Promise.resolve()
       .then(() => browser.tabs.sendMessage(tabId, query, { frameId }))
       .then(
-        (held: unknown) => held === doc,
+        (held: unknown) => (isFrameStateMessage(held) ? held : null),
         // Nothing there answers: no frame by that id, a page the content script can't run on,
         // or a new document whose content script hasn't started answering yet.
-        () => false,
+        () => null,
       );
-    if (!holds) await apply(tabId, frameId, doc, null);
+    if (answer?.doc !== doc) await update(tabId, (frames) => applyAnswer(frames, frameId, doc, answer));
   }
 
   /**
    * `verify` for every report in the tab. It reads the tab's reports on the next task, once the
    * reports already queued are in, and requests made until then share it: so the reports of a
    * burst share a check or two. It asks every frame afresh once it has read them, so no answer
-   * given before a request counts for it. Resolves once every frame has answered.
+   * given before a request counts for it.
    */
-  function checkTab(tabId: number): Promise<void> {
+  function checkTab(tabId: number): Check {
     const pending = nextCheck.get(tabId);
     if (pending) return pending;
-    const run = new Promise<void>((resolve) => setTimeout(resolve)).then(async () => {
-      let frames: TabFrames = {};
-      await enqueue(tabId, async () => {
+    let frames: TabFrames = {};
+    const asking = new Promise<void>((resolve) => setTimeout(resolve)).then(() =>
+      enqueue(tabId, async () => {
         nextCheck.delete(tabId);
         frames = await load(tabId);
-      });
+      }),
+    );
+    const answered = asking.then(async () => {
       await Promise.all(Object.entries(frames).map(([frameId, frame]) => verify(tabId, Number(frameId), frame.doc)));
     });
-    nextCheck.set(tabId, run);
-    return run;
+    const check = { asking, answered };
+    nextCheck.set(tabId, check);
+    return check;
   }
 
   return {
     report(tabId, frameId, doc, state) {
-      void apply(tabId, frameId, doc, state, (before) => {
+      void update(tabId, (frames) => applyReport(frames, frameId, doc, state), (before) => {
         // A report the tab didn't hold for this document (a new page, or a frame reporting
         // again), or a withdrawal. Either can come from a page that replaced, or is leaving,
         // documents whose withdrawals never arrive: the frames of a page that left for a browser
         // page withdraw after the move, while its top frame can't. So every frame is asked, the
         // reporter too, since it may be gone already. Asked for from inside the queue, so the
         // reports queued behind this one share the check.
-        if (!state || before[frameId]?.doc !== doc) void checkTab(tabId);
+        if (!state || before[frameId]?.doc !== doc) checkTab(tabId);
       });
     },
 
     check(tabId) {
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const waited = new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, CHECK_WAIT_MS);
-      });
-      return Promise.race([checkTab(tabId), waited])
-        .catch(() => {})
-        .finally(() => clearTimeout(timer));
+      const { asking, answered } = checkTab(tabId);
+      // The wait starts once the frames are asked, not when the popup asks: the reports queued
+      // before the check can take longer than the wait (issue #30).
+      return asking
+        .then(() => {
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          const waited = new Promise<void>((resolve) => {
+            timer = setTimeout(resolve, CHECK_WAIT_MS);
+          });
+          return Promise.race([answered, waited]).finally(() => clearTimeout(timer));
+        })
+        .catch(() => {});
     },
 
     forget(tabId) {
