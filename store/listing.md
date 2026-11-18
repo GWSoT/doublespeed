@@ -64,10 +64,9 @@ Doublespeed controls the playback speed of videos on web pages. It plays every v
 
 **Remote code:** No, I am not using remote code.
 
-**Data usage:** tick none of the data types. The form asks what is collected, and nothing is: the
-page address is only compared with the site list in memory and never kept, and the privacy policy
-says so. Tick all three certifications (no selling or transfer, no use unrelated to the single
-purpose, no use for credit decisions).
+**Data usage:** 0.1.1 went with none of the data types ticked; see
+[Before the next upload](#before-the-next-upload). Tick all three certifications (no selling or
+transfer, no use unrelated to the single purpose, no use for credit decisions).
 
 **Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. Google
 requires one from every extension that handles user data, even only on the device
@@ -89,19 +88,26 @@ No account or setup needed. Open any video, for example https://www.youtube.com/
 ## Before the next upload
 
 0.1.1's listing went to review as written above. Change these with the next package rather than
-by withdrawing that review:
+by withdrawing that review. They're what's known so far; check every claim against SPEC again
+before that upload.
 
 - **Description, keyword count:** "video" is in it seven times and "speed" six, not counting
   "Doublespeed"; bring each to five or fewer. 0.1.0 had six of each and was flagged only for its
   list; 0.1.1's rewritten first bullet added the seventh "video".
 - **Description, claims:** three have exceptions. Word them so they hold.
-  - "every video on the web at 2× from the first frame" misses sites where the user withheld its
-    access (SPEC §2.2), and a custom-element player defined after load that autoplays with no
-    later DOM change or click (SPEC §5's known gap).
+  - "every video on the web at 2× from the first frame" misses sites where the user withheld
+    Doublespeed's access (SPEC §2.2), and a custom-element player defined after load that
+    autoplays with no later DOM change or click (SPEC §5's known gap).
   - "Doublespeed sets it back" stops once a site resets the speed of the same source more than
     ~5 times in ~10 s (SPEC §3.2, rule 4).
-  - "a small label shows on the video when you change it" holds only for Doublespeed's shortcuts
-    and popup, not the site's own speed menu (SPEC §3.1, speed label).
+  - "a small label shows on the video when you change it" holds only for the shortcuts and the
+    popup's "This tab" −/+, and only over videos in view (SPEC §3.2, rule 5): not for the default
+    speed's −/+ or the site's own speed menu.
+- **Data usage:** decide whether to tick "Web history". The User Data FAQ says on-device handling
+  must be disclosed too and counts the URLs the browser visits as browsing activity, and
+  Doublespeed reads each page's address: to check it against the site list, and in the popup to
+  tell whether it can run there. The only addresses it keeps are the sites the user turned it off
+  on.
 - **Test instructions:** clicking the toolbar icon opens the popup; turning the site off is the
   popup's switch. Say both steps.
 - **addons.mozilla.org:** the description's shortcut line points to
@@ -109,5 +115,6 @@ by withdrawing that review:
   Firefox can't open the settings itself: open about:addons, click the gear button, and choose
   Manage Extension Shortcuts.
 - **Host permission justification:** "Nothing from the page is stored" reads as if nothing is
-  kept, while the storage justification says each tab's video speed is. Make the two agree with
+  kept, while each tab's video speed is (the storage justification says so), and so are the sites
+  the user turns it off on, taken from the page's address. Make it agree with
   [`PRIVACY.md`](../PRIVACY.md).
