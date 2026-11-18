@@ -29,7 +29,7 @@ export default defineConfig({
             gecko: {
               id: 'doublespeed@gwsot.github.io',
               strict_min_version: '128.0',
-              // ADR-0006: the extension collects nothing.
+              // ADR-0006: Doublespeed sends no data out of the add-on or the browser, which is what `none` declares.
               data_collection_permissions: { required: ['none'] },
             },
           },
