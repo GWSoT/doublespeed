@@ -120,18 +120,20 @@ before that upload.
   address in the background, to give its iframes the same page site; and the tab's address in the
   popup, to tell whether it can run there and whether the site is on the site list. In a page's
   memory it holds the time of the last trusted click or key press (never which key or where) and
-  each video's source address (an internal id for a `srcObject` stream), gone when the page closes.
-  Session storage holds each tab's video speed, whether it's playing and when it last started, until
-  the browser closes. The only addresses it stores are the site list's patterns: the sites it's off
-  on, music.youtube.com included. If any of them is ticked, reword "collects nothing" in the
-  description and in PRIVACY.md to match.
+  each video's source address (an internal id for a `srcObject` stream), which go with the page.
+  Session storage holds each tab's video speed, whether it's playing, when it last started and
+  whether its site is off, and which tab last asked for site access back, until the browser closes
+  at the latest. The only addresses it stores are the site list's patterns: the sites it's off on,
+  music.youtube.com included. If any of them is ticked, reword "collects nothing" in the description
+  and in PRIVACY.md to match.
 - **Test instructions:** clicking the toolbar icon opens the popup; turning the site off is the
   popup's switch. Say both steps.
 - **addons.mozilla.org:** the description's shortcut line points to
   `chrome://extensions/shortcuts`. For Firefox, give the steps the options page shows where
   Firefox can't open the settings itself: open about:addons, click the gear button, and choose
   Manage Extension Shortcuts.
-- **Host permission justification:** "Nothing from the page is stored" reads as if nothing is
-  kept, while each tab's video speed is (the storage justification says so), and so is the site
-  list, usually taken from a page's address. Make it agree with
+- **Host permission justification:** "it keeps only the time of the user's last click or key press
+  in the page" leaves out each video's source address, and "Nothing from the page is stored" reads
+  as if nothing is kept, while each tab's video speed is (the storage justification says so), and so
+  is the site list, usually taken from a page's address. Make it agree with
   [`PRIVACY.md`](../PRIVACY.md).
