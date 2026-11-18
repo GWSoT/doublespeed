@@ -76,10 +76,12 @@ Doublespeed controls the playback speed of videos on web pages. It sets videos t
 ([Data usage](#data-usage) says why). Tick all three certifications (no selling or transfer, no
 use unrelated to the single purpose, no use for credit decisions).
 
-**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. That is the URL
-once 1.0.0 is published. For 1.0.0's draft, use the `privacy-1-0-0` branch's file, which names the
-two data types and carries the Limited Use statement ([Limited Use](#limited-use)); main's keeps
-the text 0.1.1 went to review with until then ([Still open](#still-open)).
+**Privacy policy URL:** for 1.0.0's draft,
+`https://github.com/GWSoT/doublespeed/blob/privacy-1-0-0/PRIVACY.md`: the `privacy-1-0-0` branch's
+file, which names the two data types and carries the Limited Use statement
+([Limited Use](#limited-use)). Main's keeps the text 0.1.1 went to review with until 1.0.0 is
+published; after that the URL is `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md` again
+([Still open](#still-open)).
 
 ### Distribution tab
 
@@ -278,9 +280,8 @@ above are the description's.
 **Decision:** tick **Web history** and **User activity**. Leave **Website content** and the other
 six unticked.
 
-**Why anything is ticked.** Doublespeed makes no network requests itself, so it handles user data on the device (the browser's
-sync copies the settings, if it's on), and Google's rules
-count that:
+**Why anything is ticked.** Doublespeed makes no network requests itself, so it handles user data
+on the device (the browser's sync copies the settings, if it's on), and Google's rules count that:
 
 - [User Data FAQ][faq-local], 3: "Extensions are required to disclose how they handle user data,
   even when data is processed or stored locally on a user's device and is not transmitted to
@@ -366,11 +367,13 @@ that mismatch stands until 1.0.0's form replaces it.
   you, the developer, and should clearly describe the app's compliance with the Chrome Web Store
   User Data Policy, including the Limited Use requirements."
 
-The homepage is the repository, whose README links `PRIVACY.md`: one click away. The statement
-says the data is used only to control the speed of videos, never sent anywhere by Doublespeed, and
-not sold, transferred to third parties, seen by anyone on the developer's side, or used for advertising or
-credit decisions: the four elements the FAQ lists (allowed use, allowed transfer, prohibited advertising,
-prohibited human interaction).
+The homepage is the repository, whose README links `PRIVACY.md`: one click away, once the branch is
+merged. While 1.0.0 is in review that link still opens main's file, which has no such statement
+and says "collects nothing", so before the upload the README gets a second link, to the branch's
+file ([Still open](#still-open)). The statement says the data is used only to control the speed of
+videos, never sent anywhere by Doublespeed, and not sold, transferred to third parties, seen by
+anyone on the developer's side, or used for advertising or credit decisions: the four elements the
+FAQ lists (allowed use, allowed transfer, prohibited advertising, prohibited human interaction).
 
 [cws-limited]: https://developer.chrome.com/docs/webstore/program-policies/policies#limited_use
 [faq-limited]: https://developer.chrome.com/docs/webstore/program-policies/user-data-faq#limited-use
@@ -388,22 +391,23 @@ pages disagree:
 
 - [Troubleshooting, "User data policy - prominent disclosure"][cws-nickel] (notification Purple
   Nickel): "Prominent disclosure of data collection in the extension's Chrome Web Store listing is
-  sufficient." But that page predates the 2026 change: its "Relevant policy" block still quotes
-  "prior to the collection", and it still allows undisclosed collection that is "consistent with
-  the extension's single purpose", the exception the announcement removed. It is the older of the
-  two pages.
+  sufficient." That page's text is from before the 2026 change: its "Relevant policy" block still
+  quotes "prior to the collection", and it lets collection go unmentioned in the listing when it
+  is "consistent with the extension's single purpose, the user is informed of the data collection
+  before it begins, and the user consents", where the announcement now asks for disclosure
+  whatever the purpose.
 - [User Data FAQ][faq-prominent], 10: "The prominent disclosure and consent must occur within the
   Product's user interface. Disclosures in the Chrome Web Store description or inline installation
   page do not satisfy this requirement." That answer is on the live FAQ beside answer 3 on locally
-  handled data, which is new with the 2026 change, so it can't be read as superseded. It doesn't
-  fit the policy's own words: a screen in the product's interface can only show after installation.
+  handled data, which is new with the 2026 change, so it can't be read as superseded, though its
+  wording is the old policy's too. It doesn't fit the policy's own words: a screen in the
+  product's interface can only show after installation.
 
 Doublespeed handles user data in Google's sense whether or not the boxes are ticked; ticking them
 makes that visible to a reviewer, who may go by answer 10. It has no screen of its own (ADR-0005:
-no welcome tab), and the content script starts noting the input time
-from `document_start`, before the page's own scripts (`entrypoints/content.ts:18`) and before any
-of its interface shows. Going to review like that is a
-known risk, for the owner to accept or not: [Still open](#still-open).
+no welcome tab), and the content script starts noting the input time from `document_start`, before
+the page's own scripts (`entrypoints/content.ts:18`) and before any of its interface shows. Going
+to review like that is a known risk, for the owner to accept or not: [Still open](#still-open).
 
 [cws-nickel]: https://developer.chrome.com/docs/webstore/troubleshooting#udp-prominent-disclosure
 [cws-disclosure]: https://developer.chrome.com/docs/webstore/program-policies/policies#disclosure_requirements
@@ -457,11 +461,16 @@ Only the owner can do or decide these.
   Firefox ships later, as 1.0.1.
 - **`PRIVACY.md`, with 1.0.0:** the new policy (with SPEC §6 and ADR-0006's amendment) is on the
   `privacy-1-0-0` branch. Uploading and publishing are separate: while 1.0.0 is in review, the
-  published item keeps its old form. So give 1.0.0's draft the branch's file as its policy URL,
-  `https://github.com/GWSoT/doublespeed/blob/privacy-1-0-0/PRIVACY.md`, and when 1.0.0 is
-  published, merge the branch and set the URL back to main's. Rebase it onto main first
-  (`git rebase --onto main 34bfad8 privacy-1-0-0`), since main is squash-merged
-  ([Data usage](#data-usage)).
+  published item keeps its old form. So:
+  1. Before the upload, add a line to the README, the listing's homepage, linking the branch's
+     file as the policy from 1.0.0, so the Limited Use statement is one click from the homepage
+     during the review. Main's `PRIVACY.md`, 0.1.1's policy URL, stays as it is.
+  2. Give 1.0.0's draft the branch's file as its policy URL
+     ([Privacy tab](#privacy-tab)).
+  3. When 1.0.0 is published, merge the branch, after rebasing it onto main
+     (`git rebase --onto main 34bfad8 privacy-1-0-0`, since main is squash-merged), take the
+     extra README line out, and set the policy URL back to main's. Keep the branch until that
+     change of URL is live: the published item points at it until then.
 - **In the Chrome dashboard, once 0.1.1's review ends:** upload 1.0.0, paste the text above, tick
   **Web history** and **User activity**, and check that the form's definitions still read as noted
   in [Data usage](#data-usage).
