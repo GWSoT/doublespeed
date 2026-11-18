@@ -186,7 +186,9 @@ Stack: WXT + TypeScript, Svelte 5 for the popup and options page, Vitest, Playwr
 - **Manifest V3** everywhere. Chrome 120+, Firefox 128+ ([ADR-0002](docs/decisions/0002-browser-targets.md)).
 - **Permissions:** `storage` and the `<all_urls>` host permission, nothing else. No `tabs`,
   no `scripting`, no `notifications`. Every extra permission has to be justified to both stores.
-- **No network, no analytics.** `PRIVACY.md` says the extension collects nothing ([ADR-0006](docs/decisions/0006-distribution-and-privacy.md)).
+- **No network, no analytics.** `PRIVACY.md` lists what the extension reads and keeps on the
+  device. Nothing leaves the browser except the settings, through the browser's own sync
+  ([ADR-0006](docs/decisions/0006-distribution-and-privacy.md)).
 - **Performance:** the content script runs on every page. It does nothing beyond observing
   until a video appears, and it never polls.
 - **Store policy:** Chrome Web Store's single-purpose rule. The purpose is "control video
