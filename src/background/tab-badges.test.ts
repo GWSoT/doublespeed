@@ -203,7 +203,7 @@ describe('a busy frame', () => {
     expect(fake.badge()).toBe('2×');
   });
 
-  it('isn’t asked again while its answer is pending, however many new documents report', async () => {
+  it('is asked once for a burst of reports, which share one check', async () => {
     fake.frames.set(0, 'top');
     badges.report(TAB, 0, 'top', at(2));
     await vi.waitFor(() => expect(fake.asked).toEqual([0]));
@@ -215,11 +215,37 @@ describe('a busy frame', () => {
     }
     await vi.waitFor(() => expect(Object.keys(fake.stored())).toHaveLength(4));
     await settle();
-    expect(fake.asked.filter((frameId) => frameId === 0)).toHaveLength(2);
+    expect(fake.asked.slice(1).sort()).toEqual([0, 4, 5, 6]);
 
     top.answer('top');
     await settle();
     expect(Object.keys(fake.stored())).toHaveLength(4);
+  });
+});
+
+describe('a check', () => {
+  it('asks afresh, so an answer given before the tab moved on doesn’t count for it', async () => {
+    fake.frames.set(0, 'top').set(4, 'player');
+    badges.report(TAB, 0, 'top', at(2));
+    badges.report(TAB, 4, 'player', at(1.5));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 4: 'player' }));
+    await settle();
+
+    // A check is out, and the top frame's answer, "top", is held up on its way.
+    const topAsked = () => fake.asked.filter((frameId) => frameId === 0).length;
+    const before = topAsked();
+    const top = fake.busy(0);
+    void badges.check(TAB);
+    await vi.waitFor(() => expect(topAsked()).toBe(before + 1));
+
+    // The tab moves to a browser page; the iframe's withdrawal brings a new check.
+    fake.frames.clear();
+    badges.report(TAB, 4, 'player', null);
+    await vi.waitFor(() => expect(fake.stored()).toEqual({}));
+    top.answer('top');
+    await settle();
+    expect(fake.stored()).toEqual({});
+    expect(fake.badge()).toBe('');
   });
 });
 

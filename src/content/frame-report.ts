@@ -88,7 +88,10 @@ export function reportFrame(read: () => FrameState | null, signal: AbortSignal, 
     'pageshow',
     (event) => {
       if (!event.persisted) return;
+      // A new id needs a new report, even when this frame never saw its `pagehide` (a page
+      // script can stop it) and so never withdrew the old one.
       doc = newDoc();
+      sent = 'null';
       hidden = false;
       reporter.changed();
     },

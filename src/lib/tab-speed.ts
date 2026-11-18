@@ -24,8 +24,9 @@ export interface FrameState {
 }
 
 /**
- * A frame's report. `doc` is a random id per document, so a late `null` from the page the tab
- * just left can't erase what the new page in the same frame has reported.
+ * A frame's report. `doc` is a random id per document, and new after a restore from the
+ * back/forward cache, so a late `null` from the page the tab just left can't erase what the new
+ * page in the same frame has reported.
  */
 export interface FrameStateMessage {
   type: 'frameState';

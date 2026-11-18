@@ -8,8 +8,8 @@
  * tab moves to a browser page, where nothing runs to replace the report (issue #26). So the
  * background asks each frame with a report whether it still holds the document that sent it,
  * and applies the missing withdrawal when it doesn't. It asks when a report comes from a
- * document the tab doesn't hold yet, when a withdrawal removes a report, and when the popup
- * opens.
+ * document the tab doesn't hold yet for that frame, when a withdrawal removes a report, and when
+ * the popup opens.
  */
 import {
   applyReport,
@@ -49,8 +49,8 @@ export function createTabBadges(): TabBadges {
   const cache = new Map<number, TabFrames>();
   /** Work per tab runs in order, so two quick reports can't both build on the same old state. */
   const queues = new Map<number, Promise<void>>();
-  /** Questions out to frames, by tab, frame and document, so none is asked twice at once. */
-  const asking = new Map<string, Promise<void>>();
+  /** Each tab's next check, until it starts: what's asked for before then shares it. */
+  const nextCheck = new Map<number, Promise<void>>();
 
   function enqueue(tabId: number, work: () => Promise<void>): Promise<void> {
     const run = (queues.get(tabId) ?? Promise.resolve()).then(work).catch(() => {
@@ -97,34 +97,37 @@ export function createTabBadges(): TabBadges {
   }
 
   /** Asks one frame whether it still holds `doc`; if not, applies the withdrawal it never sent. */
-  function verify(tabId: number, frameId: number, doc: string): Promise<void> {
-    const key = `${tabId}:${frameId}:${doc}`;
-    const pending = asking.get(key);
-    if (pending) return pending;
+  async function verify(tabId: number, frameId: number, doc: string): Promise<void> {
     const query: FrameDocQuery = { type: 'frameDoc' };
-    const asked = Promise.resolve()
+    const holds = await Promise.resolve()
       .then(() => browser.tabs.sendMessage(tabId, query, { frameId }))
       .then(
         (held: unknown) => held === doc,
         // Nothing there answers: no frame by that id, a page the content script can't run on,
         // or a new document whose content script hasn't started answering yet.
         () => false,
-      )
-      .then(async (holds) => {
-        if (!holds) await apply(tabId, frameId, doc, null);
-      })
-      .finally(() => asking.delete(key));
-    asking.set(key, asked);
-    return asked;
+      );
+    if (!holds) await apply(tabId, frameId, doc, null);
   }
 
-  /** `verify` for every report in the tab, once the reports already queued are in. */
-  async function verifyAll(tabId: number): Promise<void> {
-    let frames: TabFrames = {};
-    await enqueue(tabId, async () => {
-      frames = await load(tabId);
+  /**
+   * `verify` for every report in the tab. It starts on the next task, so the reports of a burst
+   * share one check, and asks afresh when it starts: no answer given before a check was asked
+   * for counts for it. Resolves once every frame has answered.
+   */
+  function checkTab(tabId: number): Promise<void> {
+    const pending = nextCheck.get(tabId);
+    if (pending) return pending;
+    const run = new Promise<void>((resolve) => setTimeout(resolve)).then(async () => {
+      nextCheck.delete(tabId);
+      let frames: TabFrames = {};
+      await enqueue(tabId, async () => {
+        frames = await load(tabId);
+      });
+      await Promise.all(Object.entries(frames).map(([frameId, frame]) => verify(tabId, Number(frameId), frame.doc)));
     });
-    await Promise.all(Object.entries(frames).map(([frameId, frame]) => verify(tabId, Number(frameId), frame.doc)));
+    nextCheck.set(tabId, run);
+    return run;
   }
 
   return {
@@ -135,7 +138,7 @@ export function createTabBadges(): TabBadges {
         // documents whose withdrawals never arrive: the frames of a page that left for a browser
         // page withdraw after the move, while its top frame can't. So every frame is asked, the
         // reporter too, since it may be gone already.
-        if (before && (!state || before[frameId]?.doc !== doc)) void verifyAll(tabId);
+        if (before && (!state || before[frameId]?.doc !== doc)) void checkTab(tabId);
       });
     },
 
@@ -144,7 +147,7 @@ export function createTabBadges(): TabBadges {
       const waited = new Promise<void>((resolve) => {
         timer = setTimeout(resolve, CHECK_WAIT_MS);
       });
-      return Promise.race([verifyAll(tabId), waited])
+      return Promise.race([checkTab(tabId), waited])
         .catch(() => {})
         .finally(() => clearTimeout(timer));
     },

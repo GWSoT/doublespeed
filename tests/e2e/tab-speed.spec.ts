@@ -275,6 +275,8 @@ test.describe('a frame too busy to answer', () => {
     });
     await expect.poll(() => reportCount(context, tabId), { timeout: 3_500 }).toBe(11);
     let popup = await openPopup(context, page);
+    // Nothing while the popup's check waits for the busy frame, rather than a speed it may not have.
+    await expect(thisTab(popup)).toHaveText('');
     await expect(thisTab(popup)).toHaveText('2×', { timeout: 2_500 });
     expect(Date.now()).toBeLessThan(busyUntil);
     await popup.close();

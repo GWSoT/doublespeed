@@ -111,6 +111,20 @@ describe('reportFrame', () => {
     expect(ask()).toBe(sent[2]!.doc);
   });
 
+  it('back from the cache without the pagehide a page script stopped, still reports under its new id', async () => {
+    const frame = start(null);
+    frame.set(VIDEO);
+    await tick();
+    const before = sent[0]!.doc;
+
+    frame.win.dispatchEvent(pageshow(true));
+    await tick();
+    expect(sent).toHaveLength(2);
+    expect(sent[1]).toEqual({ type: 'frameState', doc: expect.any(String), state: VIDEO });
+    expect(sent[1]!.doc).not.toBe(before);
+    expect(ask()).toBe(sent[1]!.doc);
+  });
+
   it('sends nothing while the page is prerendered, and its report once it’s shown', async () => {
     const frame = start(VIDEO, { prerendering: true });
     frame.reporter.changed();
