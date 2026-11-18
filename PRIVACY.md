@@ -30,7 +30,8 @@ it.)
   Sync, Firefox Sync), the browser copies these to your other devices. Doublespeed never sends them
   anywhere itself.
 - **Each tab's video speed,** whether it's playing, when it last started and whether the tab's site
-  is turned off, for the toolbar badge and the popup. When you ask the popup to give Doublespeed
+  is turned off, for the toolbar badge and the popup, kept per frame with the browser's frame id and
+  a random id per page. When you ask the popup to give Doublespeed
   back its site access, it also notes which tab asked and when, so it can reload that tab once
   access comes back, and clears the note then. Both are kept in session storage, which the browser
   clears when it closes.
@@ -53,7 +54,7 @@ Doublespeed's use of this data complies with the
 [Chrome Web Store User Data Policy](https://developer.chrome.com/docs/webstore/program-policies/policies#protecting_user_privacy),
 including the Limited Use requirements. It uses the data only to control the speed of videos, as
 described here. It never sends the data anywhere itself: its developer never receives it, so
-nobody but you can see it, and Doublespeed doesn't sell it, transfer it to third parties, or use it for
+no one on its side can see it, and Doublespeed doesn't sell it, transfer it to third parties, or use it for
 advertising or credit decisions.
 
 On Firefox, the add-on declares that it collects no data, which Mozilla defines as data handled
