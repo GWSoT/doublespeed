@@ -107,7 +107,7 @@ Doublespeed is live on the Chrome Web Store and addons.mozilla.org.
 
 **Slices:**
 - **Icon:** a play button with speed streaks on the existing purple, in every size both stores need. — done early, for risk 4: `assets/icon.svg` and `icon-16.svg`, rendered by `make icons`.
-- **Listing materials:** `PRIVACY.md`, listing text, screenshots, the justification for all-sites access, and the single-purpose statement. — drafted early, for risk 4, in [`store/listing.md`](store/listing.md), with images from `make store-images`; [`PRIVACY.md`](PRIVACY.md) added when the repo went public.
+- **Listing materials:** `PRIVACY.md`, listing text, screenshots, the justification for all-sites access, and the single-purpose statement. — drafted early, for risk 4, in [`store/listing.md`](store/listing.md), with images from `make store-images`; [`PRIVACY.md`](PRIVACY.md) added when the repo went public. 1.0.0's text for both stores is ready there (2026-11-18), with the addons.mozilla.org source package and its build steps checked.
 - **Trademark:** the search from open item 2.
 - **Release:** the repo made public (done 2026-11-17, ahead of the rest), version 1.0.0 zips from CI, submitted to both stores from Nazar's accounts (the first submission to addons.mozilla.org, and an update to the existing Chrome Web Store item, whose unlisted uploads came early for risk 4), and the Chrome item made public once 1.0.0 is approved.
 
