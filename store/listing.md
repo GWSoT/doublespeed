@@ -1,23 +1,30 @@
 # Store listing
 
 What goes into the Chrome Web Store's developer dashboard, field by field. The item is
-`adocdalonhmgamdohammiefgchljljef`, published by GWOSTIK; 0.1.0 went to review, unlisted, on
-2026-11-17. The images are in
-[`images/`](images/), made by `make store-images`; the store icon is
-[`public/icon/128.png`](../public/icon/128.png), made by `make icons`. addons.mozilla.org reuses
-the same text in Phase 3.
+`adocdalonhmgamdohammiefgchljljef`, published by GWOSTIK. 0.1.0 went to review, unlisted, on
+2026-11-17 and was rejected the next day for its description; 0.1.1 went to review on 2026-11-18
+with the text below (ROADMAP risk 4). The images are in [`images/`](images/), made by
+`make store-images`; the store icon is [`public/icon/128.png`](../public/icon/128.png), made by
+`make icons`. addons.mozilla.org reuses the same text in Phase 4.
 
 The name and the one-line summary come from the manifest (`extName` and `extDescription` in
 [`messages.json`](../public/_locales/en/messages.json)), so they aren't repeated here.
 
 ## Store listing tab
 
-**Description:**
+**Description:** Google's keyword-spam policy ([troubleshooting][keyword-spam]) rules out lists
+of sites "without substantial added value" and "unnatural repetition of the same keyword more
+than 5 times". A bullet naming six sites got 0.1.0 rejected ("Yellow Argon"), so our own rule is
+stricter: name no sites, except music.youtube.com to say it starts off there, and use no keyword
+more than five times. The text below is what 0.1.1 went to review with;
+[Before the next upload](#before-the-next-upload) says what to change in it.
+
+[keyword-spam]: https://developer.chrome.com/docs/webstore/troubleshooting/#keyword-stuffing
 
 ```text
 Doublespeed plays every video on the web at 2× from the first frame, so you never have to hunt for a speed menu again.
 
-• Every video, everywhere: YouTube, Netflix, Vimeo, Twitch, X, Reddit, news sites, embedded players, and players with no speed menu at all.
+• Every video, everywhere: video and streaming sites, social feeds, news sites, embedded players, and players with no speed menu at all.
 • Your choice wins: change a video's speed with the site's own menu or with the shortcuts, and that video keeps it. The next video starts at your default again.
 • Sites can't quietly reset it: when a player puts itself back to 1×, Doublespeed sets it back.
 • Shortcuts: Alt+. faster, Alt+, slower (0.25× steps), Alt+R to switch between 1× and your default. Change them at chrome://extensions/shortcuts.
@@ -33,8 +40,7 @@ Private by design: Doublespeed collects nothing and makes no network requests. Y
 **Category:** Tools. **Language:** English.
 
 **Homepage URL:** `https://github.com/GWSoT/doublespeed`. **Support URL:**
-`https://github.com/GWSoT/doublespeed/issues`. Both with the next upload, like the privacy policy
-URL.
+`https://github.com/GWSoT/doublespeed/issues`.
 
 **Graphic assets:**
 - **Store icon:** `public/icon/128.png`.
@@ -58,20 +64,79 @@ Doublespeed controls the playback speed of videos on web pages. It plays every v
 
 **Remote code:** No, I am not using remote code.
 
-**Data usage:** tick none of the data types. Tick all three certifications (no selling or
+**Data usage:** 0.1.1 went with none of the data types ticked; see
+[Before the next upload](#before-the-next-upload). Tick all three certifications (no selling or
 transfer, no use unrelated to the single purpose, no use for credit decisions).
 
-**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. The store
-asks for one only when user data is collected, and none is, but it costs nothing to give. 0.1.0
-went to review without it; add it with the next upload rather than withdrawing that review.
+**Privacy policy URL:** `https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md`. Google
+requires one from every extension that handles user data, even only on the device
+([User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)), and
+Doublespeed reads each page's hostname to check it against the site list. 0.1.0 went without one;
+0.1.1 has it.
 
 ## Distribution tab
 
-**Payments:** free. **Visibility:** unlisted for the first upload (ROADMAP risk 4), public at
-launch. **Regions:** all.
+**Payments:** free. **Visibility:** unlisted until launch (ROADMAP risk 4), then public.
+**Regions:** all.
 
 ## Test instructions tab
 
 ```text
 No account or setup needed. Open any video, for example https://www.youtube.com/watch?v=jNQXAC9IVRw. It plays at 2×, and the toolbar icon shows "2×". Press Alt+. to go to 2.25×; a label shows the new speed on the video. Click the toolbar icon to turn it off for the site.
 ```
+
+## Before the next upload
+
+0.1.1's listing went to review as written above. Change these with the next package rather than
+by withdrawing that review. They're what's known so far; check every claim against SPEC again
+before that upload.
+
+- **Description, keyword count:** "video" is in it seven times and "speed" six, not counting
+  "Doublespeed"; bring each to five or fewer. 0.1.0 had six of each and was flagged only for its
+  list; 0.1.1's rewritten first bullet added the seventh "video".
+- **Description, claims:** four have exceptions. Word them so they hold.
+  - "every video on the web at 2× from the first frame" misses sites where the user withheld
+    Doublespeed's access (SPEC §2.2); a custom-element player defined after load that autoplays
+    with no later DOM change or click (SPEC §5's known gap); and a video that starts playing
+    before the content script has read its settings, since it reads them before it looks for
+    videos (`entrypoints/content.ts`).
+  - "change a video's speed with the site's own menu … and that video keeps it" misses an
+    embedding page that sets an iframe player's speed through the player's API: the click is in
+    the parent frame, which rule 3 doesn't see. Unless the video's own frame also had a trusted
+    click or key press in the second before, after the default was applied to that source, the
+    change counts as a site reset (SPEC §3.2, rules 3 and 4).
+  - "Doublespeed sets it back" stops once a site resets the speed of the same source more than
+    ~5 times in ~10 s (SPEC §3.2, rule 4).
+  - "a small label shows on the video when you change it" holds only for the shortcuts and the
+    popup's "This tab" −/+, and only over videos in view (SPEC §3.2, rule 5): not for the default
+    speed's −/+ or the site's own speed menu.
+- **Data usage:** decide whether to tick "Web history", "User activity" or "Website content". The
+  User Data FAQ says on-device handling must be disclosed too and counts the URLs the browser visits
+  as browsing activity. The form defines web history as the list of pages the user opened plus
+  related data such as page titles and visit times; user activity as, for example, network
+  monitoring, clicks, mouse position, scrolling or key presses; and website content as, for example,
+  text, images, sounds, videos or hyperlinks (checked in the dashboard 2026-11-18). Doublespeed
+  reads page addresses: the top frame's hostname, to check it against the site list; the tab's
+  address in the background, to give its iframes the same page site; and the tab's address in the
+  popup, to tell whether it can run there and whether the site is on the site list. In a page's
+  memory it holds the time of the last trusted click or key press (never which key or where) and
+  each video's source address (an internal id for a `srcObject` stream), which go with the page.
+  Session storage holds each tab's video speed, whether it's playing, when it last started and
+  whether its site is off, and which tab last asked for site access back, until the browser closes
+  at the latest. The only addresses it stores are the site list's patterns: the sites it's off on,
+  music.youtube.com included. If any of them is ticked, reword "collects nothing" in the description
+  and in PRIVACY.md to match.
+- **Limited Use:** check whether the User Data Policy wants PRIVACY.md to state, beyond the
+  dashboard's three certifications, that Doublespeed's use of user data meets its Limited Use
+  requirements, and add the statement if so.
+- **Test instructions:** clicking the toolbar icon opens the popup; turning the site off is the
+  popup's switch. Say both steps.
+- **addons.mozilla.org:** the description's shortcut line points to
+  `chrome://extensions/shortcuts`. For Firefox, give the steps the options page shows where
+  Firefox can't open the settings itself: open about:addons, click the gear button, and choose
+  Manage Extension Shortcuts.
+- **Host permission justification:** "it keeps only the time of the user's last click or key press
+  in the page" leaves out each video's source address, and "Nothing from the page is stored" reads
+  as if nothing is kept, while each tab's video speed is (the storage justification says so), and so
+  is the site list, usually taken from a page's address. Make it agree with
+  [`PRIVACY.md`](../PRIVACY.md).
