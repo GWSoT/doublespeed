@@ -454,9 +454,8 @@ package, so [`README.md`](../README.md) has them.
 
 Only the owner can do or decide these.
 
-- **The order of the release:** bump the version to 1.0.0 once
-  [#32](https://github.com/GWSoT/doublespeed/issues/32)'s manifest change is on main, and build
-  once, so both stores get the same commit; upload to Chrome; submit to AMO no earlier than the
+- **The order of the release:** bump the version to 1.0.0 and build once, so both stores get
+  the same commit; upload to Chrome; submit to AMO no earlier than the
   `PRIVACY.md` merge below, since AMO's description links it. Or say that Firefox ships later, as
   1.0.1.
 - **`PRIVACY.md`, with 1.0.0:** the new policy (with SPEC §6 and ADR-0006's amendment) is on the
