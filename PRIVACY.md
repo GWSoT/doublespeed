@@ -6,7 +6,9 @@ your browser's own sync copies to your other devices if you have it on.
 
 ## What it reads
 
-A video can be on any site and inside any frame, so Doublespeed runs on every page. There it reads:
+A video can be on any site and inside any frame, so Doublespeed runs on every page. The one
+exception is Firefox's private windows: it doesn't run in them, so it reads and keeps nothing from
+them. Where it runs, it reads:
 
 - **The page's address,** to check the page's site against your site list. The popup reads the
   tab's address too, to name the site and to tell whether Doublespeed can run there, and the
@@ -31,10 +33,9 @@ it.)
   anywhere itself.
 - **Each tab's video speed,** whether it's playing, when it last started and whether the tab's site
   is turned off, for the toolbar badge and the popup, kept per frame with the browser's frame id and
-  a random id per page. When you ask the popup to give Doublespeed
-  back its site access, it also notes which tab asked and when, so it can reload that tab once
-  access comes back, and clears the note then. Both are kept in session storage, which the browser
-  clears when it closes.
+  a random id per page. When you ask the popup to give Doublespeed back its site access, it also
+  notes which tab asked and when, so it can reload that tab once access comes back, and clears the
+  note then. Both are kept in session storage, which the browser clears when it closes.
 - **Each video's source address,** in that page's memory, to notice when a player moves on to a
   new video. It lives only there and goes with the page.
 - **The time of your last click or key press on a page,** in that page's memory. It lives only
@@ -46,19 +47,20 @@ Uninstalling Doublespeed removes what it keeps in that browser.
 
 The Chrome Web Store counts data an extension handles on your device too. In its terms, what
 Doublespeed reads is **web history** (the page and video addresses above, and the sites in your
-site list) and **user activity** (the time of your last click or key press), and its form
-on the store declares both. It declares no website content: it never looks at a page's text or
-images, or at the pictures or sound of a video.
+site list) and **user activity** (the time of your last click or key press), and its form on the
+store declares both. It declares no website content: it never looks at a page's text or images, or
+at the pictures or sound of a video.
 
 Doublespeed's use of this data complies with the
 [Chrome Web Store User Data Policy](https://developer.chrome.com/docs/webstore/program-policies/policies#protecting_user_privacy),
 including the Limited Use requirements. It uses the data only to control the speed of videos, as
-described here. It never sends the data anywhere itself: its developer never receives it, so
-no one on its side can see it, and Doublespeed doesn't sell it, transfer it to third parties, or use it for
-advertising or credit decisions.
+described here. It never sends the data anywhere itself: its developer never receives it, so no
+one on its side can see it, and Doublespeed doesn't sell it, transfer it to third parties, or use
+it for advertising or credit decisions.
 
 On Firefox, the add-on declares that it collects no data, which Mozilla defines as data handled
-outside the add-on or the browser.
+outside the add-on or the browser. Its manifest also keeps it out of private windows, and Firefox
+offers no switch to allow it there.
 
 ## Checking this
 
@@ -66,4 +68,4 @@ The source is public under the MIT licence, so anyone can confirm all of the abo
 [GitHub issues](https://github.com/GWSoT/doublespeed/issues). If this policy ever changes, the
 change shows in this file's history.
 
-Last updated: 2026-11-18.
+Last updated: 2026-11-19.
