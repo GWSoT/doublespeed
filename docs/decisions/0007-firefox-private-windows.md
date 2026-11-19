@@ -9,11 +9,11 @@
 
 Mozilla's [Add-on Policies](https://extensionworkshop.com/documentation/publish/add-on-policies/),
 6.3: "Data from private browsing sessions must not be stored." Firefox keeps an extension
-the user installed out of private windows until the user allows it there ("Run in Private Windows" in `about:addons`). If a
-user allowed Doublespeed, a private tab's data would be stored: the popup's site switch writes the
-page site, with the date, to `storage.sync`, and the background keeps the tab's frame reports in
-`storage.session` while the tab is open. This blocks the addons.mozilla.org submission
-([#7](https://github.com/GWSoT/doublespeed/issues/7)).
+the user installed out of private windows until the user allows it there ("Run in Private
+Windows" in `about:addons`). If a user allowed Doublespeed, a private tab's data would be stored:
+the popup's site switch writes the page site, with the date, to `storage.sync`, and the background
+keeps the tab's frame reports in `storage.session` while the tab is open. This blocks the
+addons.mozilla.org submission ([#7](https://github.com/GWSoT/doublespeed/issues/7)).
 
 ## Options considered
 
