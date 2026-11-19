@@ -20,7 +20,7 @@ import {
 const DEFAULT = 2;
 
 const reportCount = async (context: BrowserContext, target: Page | number) =>
-  Object.keys(await tabReports(context, target)).length;
+  Object.values(await tabReports(context, target)).flat().length;
 const thisTab = (popup: Page) => popup.getByRole('group', { name: 'This tab' }).locator('output');
 
 const rateOf = (target: Page | Frame) =>

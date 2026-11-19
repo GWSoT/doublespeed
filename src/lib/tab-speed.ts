@@ -104,8 +104,9 @@ export function applyReport(frames: TabFrames, frameId: number, doc: string, sta
 }
 
 /**
- * The tab's speed, each frame counting by its latest report: a frame that still holds another
- * document's report shows what it said last.
+ * The tab's speed, each frame counting by its latest report. Until a check drops the reports of
+ * the pages a frame has left, the latest can be one of theirs: the last to arrive, or the one
+ * that's left when the new page withdraws its own first.
  */
 export function tabSpeed(frames: TabFrames): TabSpeed {
   const latest = Object.keys(frames)
