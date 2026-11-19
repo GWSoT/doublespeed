@@ -21,6 +21,7 @@ function fakeBrowser({ storageMs = 0 } = {}) {
   const later = <T>(value: T): Promise<T> =>
     storageMs ? new Promise((resolve) => setTimeout(() => resolve(value), storageMs)) : Promise.resolve(value);
   const badge = new Map<number, string>();
+  const shown: string[] = [];
   const frames = new Map<number, string | Busy>();
   const asked: number[] = [];
   const messages: unknown[] = [];
@@ -37,7 +38,10 @@ function fakeBrowser({ storageMs = 0 } = {}) {
       },
     },
     action: {
-      setBadgeText: ({ tabId, text }: { tabId: number; text: string }) => later(void badge.set(tabId, text)),
+      setBadgeText: ({ tabId, text }: { tabId: number; text: string }) => {
+        shown.push(text);
+        return later(void badge.set(tabId, text));
+      },
       setBadgeBackgroundColor: () => later(undefined),
     },
     i18n: { getMessage: (name: string, subs?: string[]) => (name === 'badgeOff' ? 'off' : `${subs?.[0]}×`) },
@@ -55,6 +59,8 @@ function fakeBrowser({ storageMs = 0 } = {}) {
 
   return {
     badge: () => badge.get(TAB),
+    /** Every text the badge was given, in order. */
+    shown,
     /** The tab's stored reports, by frame id, as the `doc` of each report in the frame, the latest last. */
     stored: () => {
       const tab = (session.get(`tab:${TAB}`) ?? {}) as Record<string, { doc: string }[]>;
@@ -292,6 +298,25 @@ describe('a late report from the page a frame left (issue #34)', () => {
     await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['third'] }));
     second.answer('third');
     await ends({ 0: ['third'] }, '2×');
+  });
+
+  it('is dropped together with another old page’s, so the badge shows neither in between', async () => {
+    // The frame went from `old` to `older` to `new`, and all three reports are in when it's asked.
+    await leave();
+    const asked = fake.busy(0);
+    badges.report(TAB, 0, 'new', at(2));
+    badges.report(TAB, 0, 'old', at(1.5));
+    badges.report(TAB, 0, 'older', at(3));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    // `old` reports again, so it's the frame's latest, and `older` would show once it's dropped.
+    badges.report(TAB, 0, 'old', at(1.25));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['new', 'older', 'old'] }));
+    const before = fake.shown.length;
+    fake.frames.set(0, 'new');
+    asked.answer('new');
+    await ends({ 0: ['new'] }, '2×');
+    expect(fake.shown.slice(before)).toEqual(['2×']);
   });
 
   it('has the frame asked again once dropped, since the answer may name a page the tab has left', async () => {
