@@ -139,6 +139,9 @@ Overrides never sync and never survive a reload.
 | `tab:<tabId>` | `{ [frameId]: { doc, off, video: { speed, playing, playedAt } \| null } }` | Each frame's report for the badge, and for the popup's speed for this tab. A frame sends one only when it has something to show, and withdraws it on `pagehide`; `doc` is per document, and new each time a page comes back from the back/forward cache, so a late withdrawal from the page a tab just left can't erase the new one. A withdrawal can also go missing, as it does when the tab moves to a browser page, so the background asks each frame with a report whether it still holds that report's `doc`, and applies the missing withdrawal when it doesn't. It asks when a report comes from a document the tab doesn't hold for that frame (a new page, or one reporting again), when a withdrawal removes a report, and when the popup opens. It asks once the reports already queued are stored; the popup waits up to half a second from then for the answers, and a later answer still counts. A prerendered page reports only once it's shown. Removed when the tab closes. |
 | `accessGrant` | `{ tabId, at }` | The tab the popup's grant button was pressed in, and when. The next time site access is granted, the background removes it, and reloads that tab if the request is under two minutes old. |
 
+On Firefox nothing in either store comes from a private window, since Doublespeed doesn't run in
+one (§6).
+
 ## 5. Architecture
 
 ```
@@ -184,6 +187,10 @@ Stack: WXT + TypeScript, Svelte 5 for the popup and options page, Vitest, Playwr
 ## 6. Constraints
 
 - **Manifest V3** everywhere. Chrome 120+, Firefox 128+ ([ADR-0002](docs/decisions/0002-browser-targets.md)).
+- **Not in Firefox's private windows.** Mozilla's policies forbid storing data from private
+  browsing, so Firefox's manifest sets `incognito: "not_allowed"`: Doublespeed never runs there,
+  and the user can't allow it ([ADR-0007](docs/decisions/0007-firefox-private-windows.md)). Chrome's
+  manifest sets nothing, so Chrome's own default applies: not in incognito unless the user allows it.
 - **Permissions:** `storage` and the `<all_urls>` host permission, nothing else. No `tabs`,
   no `scripting`, no `notifications`. Every extra permission has to be justified to both stores.
 - **No network, no analytics.** `PRIVACY.md` says the extension collects nothing ([ADR-0006](docs/decisions/0006-distribution-and-privacy.md)).

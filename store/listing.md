@@ -102,11 +102,12 @@ No account or setup needed. Use a fresh browser profile: settings synced from an
 
 ## addons.mozilla.org, 1.0.0
 
-Submitted from the Developer Hub's Submit a New Add-on, "On this site". Not before
-[#32](https://github.com/GWSoT/doublespeed/issues/32) is settled: Mozilla's policies say "Data from
-private browsing sessions must not be stored" ([Add-on Policies][amo-policies], 6.3), and in a
-private window the user allowed it in, Doublespeed stores the tab's reports and, if they turn a
-site off there, the site.
+Submitted from the Developer Hub's Submit a New Add-on, "On this site". Mozilla's policies say
+"Data from private browsing sessions must not be stored" ([Add-on Policies][amo-policies], 6.3), so
+Firefox's manifest sets `incognito: "not_allowed"`: Doublespeed doesn't run in private windows, and
+`about:addons` has no switch to allow it
+([#32](https://github.com/GWSoT/doublespeed/issues/32), [ADR-0007](../docs/decisions/0007-firefox-private-windows.md)).
+The description and the notes for reviewers say so.
 
 ### Upload Version
 
@@ -160,7 +161,7 @@ site off there, the site.
 
   Live streams that report no end are left alone.
 
-  Privacy: no network requests and no analytics. Doublespeed reads each page's address, to check it against your list of sites where it's off, and the address of what's playing, to notice when it moves on. It notes when you last clicked or pressed a key, never which key or where, to tell your choices from the site's. Nothing it reads leaves your browser, except your settings, which your browser's own sync copies to your other devices if you have it on. Privacy policy: https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md
+  Privacy: no network requests and no analytics. Doublespeed reads each page's address, to check it against your list of sites where it's off, and the address of what's playing, to notice when it moves on. It notes when you last clicked or pressed a key, never which key or where, to tell your choices from the site's. Nothing it reads leaves your browser, except your settings, which your browser's own sync copies to your other devices if you have it on. The add-on doesn't run in private windows. Privacy policy: https://github.com/GWSoT/doublespeed/blob/main/PRIVACY.md
   ```
 
 - **This add-on is experimental:** no. **Requires payment:** no.
@@ -193,7 +194,7 @@ site off there, the site.
 
   The add-on is then in .output/firefox-mv3/, file for file the same as the uploaded package. This was checked on Linux ARM64 (Docker's node:24.14.0-slim, Debian) with Node 24.14.0 and npm 11.9.0, the versions of your default environment, and on macOS with Node 24. The steps are in the README too.
 
-  Data: the manifest declares no data collection. Doublespeed makes no network requests. It keeps its settings in storage.sync, which Firefox Sync copies to the user's other devices if they have it on; nothing else leaves the browser.
+  Data: the manifest declares no data collection. Doublespeed makes no network requests. It keeps its settings in storage.sync, which Firefox Sync copies to the user's other devices if they have it on; nothing else leaves the browser. It doesn't run in private windows: the manifest sets "incognito": "not_allowed", so nothing from private browsing is stored (policy 6.3).
   ```
 
 The notes' "file for file the same" sentence is true of 1.0.0 only once the rebuild in
@@ -271,6 +272,7 @@ above are the description's.
 | "turn it off for a site from the popup. music.youtube.com starts off." | The popup's switch writes the site's exact-hostname rule (`src/lib/site-switch.ts`, `entrypoints/popup/App.svelte:196`); music.youtube.com is seeded on install (`src/lib/settings.ts:43`). | Seeding is skipped when sync brings settings from another browser (SPEC §4); that user's own list applies. |
 | "2× unless you set another in the popup, from 0.25× to 4×" | `speed.ts:8–12`; the popup's default −/+. | |
 | "Live streams that report no end are left alone." | A live video is one whose duration is `Infinity`, left alone for good, rewound or not (`speed-rules.ts:67`, `:106`; SPEC §3.1). | A live player can report a finite duration and is then sped up like any video: hls.js does by default (`liveDurationInfinity: false` in its `docs/API.md`). Hence "that report no end". Checked on the live fixture only, not on a real site. |
+| "The add-on doesn't run in private windows." (AMO) | `incognito: "not_allowed"` in Firefox's manifest (`wxt.config.ts`, tested in `wxt.config.test.ts`). Checked 2026-11-19 on 128.14 ESR and 160.0: `about:addons` shows "Not Allowed in Private Windows" in place of the switch, a private window has no toolbar button and no shortcuts, its video stays at 1×, and no frame report is stored for it (ADR-0007). | Chrome: the manifest sets nothing there, so a user can allow Doublespeed in incognito. The Chrome text doesn't mention it. |
 | The privacy paragraph | No `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` or `sendBeacon` anywhere in `entrypoints/` or `src/`. Page address: `frame-settings.ts:59`, `background.ts:24`, `App.svelte:87`. Source address: `src/content/speed-engine.ts:79–84`. Input time: `src/content/user-input.ts:10`. Settings in `storage.sync` (SPEC §4). | |
 | Storage and host permission justifications | SPEC §4's two tables; the reads as for the privacy paragraph. | |
 | Test instructions | `popupSiteOn`, `popupSiteOff`, `badgeOff`, `popupNoAccess` and `popupGrantAccess` in `messages.json`; a speed that isn't whole drops its × on the badge (`src/lib/tab-speed.ts:116–117`); the popup drops `www.` (`src/lib/site-patterns.ts:17–20`); turning a site off puts back each video's speed from before (rule 6, `speed-rules.ts:135`). | |
@@ -452,12 +454,10 @@ package, so [`README.md`](../README.md) has them.
 
 Only the owner can do or decide these.
 
-- **Private windows on Firefox, before the AMO submission:**
-  [#32](https://github.com/GWSoT/doublespeed/issues/32).
-- **The order of the release:** settle #32 first, since either fix changes a package; then bump the
-  version to 1.0.0 and build once, so both stores get the same commit; upload to Chrome; submit to
-  AMO no earlier than the `PRIVACY.md` merge below, since AMO's description links it. Or say that
-  Firefox ships later, as 1.0.1.
+- **The order of the release:** bump the version to 1.0.0 and build once, so both stores get
+  the same commit; upload to Chrome; submit to AMO no earlier than the
+  `PRIVACY.md` merge below, since AMO's description links it. Or say that Firefox ships later, as
+  1.0.1.
 - **`PRIVACY.md`, with 1.0.0:** the new policy (with SPEC §6 and ADR-0006's amendment) is on the
   `privacy-1-0-0` branch. Uploading and publishing are separate: while 1.0.0 is in review, the
   published item keeps its old form. So:
