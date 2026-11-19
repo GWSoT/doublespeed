@@ -5,11 +5,13 @@
  * show the tab's speed.
  *
  * A frame withdraws its report on `pagehide`, but that message can go missing: it does when the
- * tab moves to a browser page, where nothing runs to replace the report (issue #26). So the
- * background asks each frame with a report whether it still holds the document that sent it,
- * and applies the missing withdrawal when it doesn't. It asks when a report comes from a
- * document the tab doesn't hold yet for that frame, when a withdrawal removes a report, and when
- * the popup opens.
+ * tab moves to a browser page, where nothing runs to replace the report (issue #26). And a report
+ * the page sent just before it left can arrive after the new page's, so the tab keeps one report
+ * per document in each frame, and neither can cost the other its report (issue #34). So the
+ * background asks each frame with reports which document it holds, and drops the frame's reports
+ * from any other, applying the withdrawals that never arrived. It asks when a report comes from a
+ * document the frame has no report from yet, when a withdrawal removes a report, when the popup
+ * opens, and after a check drops a report.
  */
 import {
   applyReport,
@@ -36,10 +38,9 @@ export const CHECK_WAIT_MS = 500;
 export interface TabBadges {
   report(tabId: number, frameId: number, doc: string, state: FrameState | null): void;
   /**
-   * Asks every frame with a report in the tab whether it still holds that report's document,
-   * and drops the reports whose frame doesn't. It asks once the reports queued before it are in.
-   * Resolves once all have answered, or `CHECK_WAIT_MS` after they're asked; a later answer still
-   * drops its report.
+   * Asks every frame with reports in the tab which document it holds, and drops its reports from
+   * any other. It asks once the reports queued before it are in. Resolves once all have answered,
+   * or `CHECK_WAIT_MS` after they're asked; a later answer still drops its frame's stale reports.
    */
   check(tabId: number): Promise<void>;
   forget(tabId: number): void;
@@ -81,19 +82,17 @@ export function createTabBadges(): TabBadges {
   }
 
   /**
-   * Applies one frame's report, or its withdrawal (`null`), and shows the result. `changed` runs
-   * in the same turn of the queue, with the reports as they were, when something changed.
+   * Applies a change to the tab's reports and shows the result. `changed` runs in the same turn
+   * of the queue, with the reports as they were, when something changed.
    */
   function apply(
     tabId: number,
-    frameId: number,
-    doc: string,
-    state: FrameState | null,
+    change: (frames: TabFrames) => TabFrames,
     changed?: (before: TabFrames) => void,
   ): Promise<void> {
     return enqueue(tabId, async () => {
       const frames = await load(tabId);
-      const next = applyReport(frames, frameId, doc, state);
+      const next = change(frames);
       if (next === frames) return;
       cache.set(tabId, next);
       const key = tabKey(tabId);
@@ -113,25 +112,39 @@ export function createTabBadges(): TabBadges {
     await browser.action.setBadgeText({ tabId, text });
   }
 
-  /** Asks one frame whether it still holds `doc`; if not, applies the withdrawal it never sent. */
-  async function verify(tabId: number, frameId: number, doc: string): Promise<void> {
+  /**
+   * Asks one frame which document it holds, and applies the withdrawals that never arrived from
+   * the others in `docs`: the documents the check read reports from for this frame before asking.
+   * A report that arrived since may be from a page newer than the answer, so it's left to the
+   * check its own arrival started. They go in one turn of the queue, so the badge never shows one
+   * of them between two drops. A drop starts another check, since the answer is old by the time
+   * it's applied: the tab may have left the page it names since, with that withdrawal lost too,
+   * and the drop leaves that page's report standing for the badge.
+   */
+  async function verify(tabId: number, frameId: number, docs: readonly string[]): Promise<void> {
     const query: FrameDocQuery = { type: 'frameDoc' };
-    const holds = await Promise.resolve()
+    const held = await Promise.resolve()
       .then(() => browser.tabs.sendMessage(tabId, query, { frameId }))
       .then(
-        (held: unknown) => held === doc,
+        (answer: unknown) => answer,
         // Nothing there answers: no frame by that id, a page the content script can't run on,
         // or a new document whose content script hasn't started answering yet.
-        () => false,
+        () => null,
       );
-    if (!holds) await apply(tabId, frameId, doc, null);
+    const gone = docs.filter((doc) => doc !== held);
+    if (!gone.length) return;
+    await apply(
+      tabId,
+      (frames) => gone.reduce((left, doc) => applyReport(left, frameId, doc, null), frames),
+      () => void checkTab(tabId),
+    );
   }
 
   /**
-   * `verify` for every report in the tab. It reads the tab's reports on the next task, once the
-   * reports already queued are in, and requests made until then share it: so the reports of a
-   * burst share a check or two. It asks every frame afresh once it has read them, so no answer
-   * given before a request counts for it.
+   * `verify` for every frame with reports in the tab. It reads the tab's reports on the next task,
+   * once the reports already queued are in, and requests made until then share it: so the reports
+   * of a burst share a check or two. It asks every frame afresh once it has read them, so no
+   * answer given before a request counts for it.
    */
   function checkTab(tabId: number): Check {
     const pending = nextCheck.get(tabId);
@@ -144,7 +157,9 @@ export function createTabBadges(): TabBadges {
       }),
     );
     const answered = asking.then(async () => {
-      await Promise.all(Object.entries(frames).map(([frameId, frame]) => verify(tabId, Number(frameId), frame.doc)));
+      await Promise.all(
+        Object.entries(frames).map(([frameId, reports]) => verify(tabId, Number(frameId), reports.map((r) => r.doc))),
+      );
     });
     const check = { asking, answered };
     nextCheck.set(tabId, check);
@@ -153,14 +168,15 @@ export function createTabBadges(): TabBadges {
 
   return {
     report(tabId, frameId, doc, state) {
-      void apply(tabId, frameId, doc, state, (before) => {
-        // A report the tab didn't hold for this document (a new page, or a frame reporting
-        // again), or a withdrawal. Either can come from a page that replaced, or is leaving,
-        // documents whose withdrawals never arrive: the frames of a page that left for a browser
-        // page withdraw after the move, while its top frame can't. So every frame is asked, the
-        // reporter too, since it may be gone already. Asked for from inside the queue, so the
-        // reports queued behind this one share the check.
-        if (!state || before[frameId]?.doc !== doc) checkTab(tabId);
+      const change = (frames: TabFrames) => applyReport(frames, frameId, doc, state);
+      void apply(tabId, change, (before) => {
+        // A report from a document the frame had no report from (a new page, a frame reporting
+        // again, or a late report from a page it left), or a withdrawal. Either can come from a
+        // page that replaced, or is leaving, documents whose withdrawals never arrive: the frames
+        // of a page that left for a browser page withdraw after the move, while its top frame
+        // can't. So every frame is asked, the reporter too, since it may be gone already. Asked
+        // for from inside the queue, so the reports queued behind this one share the check.
+        if (!state || !before[frameId]?.some((report) => report.doc === doc)) checkTab(tabId);
       });
     },
 
