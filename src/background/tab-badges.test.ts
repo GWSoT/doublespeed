@@ -22,6 +22,7 @@ function fakeBrowser({ storageMs = 0 } = {}) {
     storageMs ? new Promise((resolve) => setTimeout(() => resolve(value), storageMs)) : Promise.resolve(value);
   const badge = new Map<number, string>();
   const shown: string[] = [];
+  let reads = 0;
   const frames = new Map<number, string | Busy>();
   const asked: number[] = [];
   const messages: unknown[] = [];
@@ -29,7 +30,10 @@ function fakeBrowser({ storageMs = 0 } = {}) {
   vi.stubGlobal('browser', {
     storage: {
       session: {
-        get: (key: string) => later(session.has(key) ? { [key]: structuredClone(session.get(key)) } : {}),
+        get: (key: string) => {
+          reads++;
+          return later(session.has(key) ? { [key]: structuredClone(session.get(key)) } : {});
+        },
         set: (items: Record<string, unknown>) => {
           for (const [key, value] of Object.entries(items)) session.set(key, structuredClone(value));
           return later(undefined);
@@ -61,6 +65,8 @@ function fakeBrowser({ storageMs = 0 } = {}) {
     badge: () => badge.get(TAB),
     /** Every text the badge was given, in order. */
     shown,
+    /** How many times `storage.session` was read. */
+    reads: () => reads,
     /** The tab's stored reports, by frame id, as the `doc` of each report in the frame, the latest last. */
     stored: () => {
       const tab = (session.get(`tab:${TAB}`) ?? {}) as Record<string, { doc: string }[]>;
@@ -301,17 +307,17 @@ describe('a late report from the page a frame left (issue #34)', () => {
   });
 
   it('is dropped together with another old page’s, so the badge shows neither in between', async () => {
-    // The frame went from `old` to `older` to `new`, and all three reports are in when it's asked.
+    // The frame went from `old` to `between` to `new`, and all three reports are in when it's asked.
     await leave();
     const asked = fake.busy(0);
     badges.report(TAB, 0, 'new', at(2));
     badges.report(TAB, 0, 'old', at(1.5));
-    badges.report(TAB, 0, 'older', at(3));
+    badges.report(TAB, 0, 'between', at(3));
     await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
 
-    // `old` reports again, so it's the frame's latest, and `older` would show once it's dropped.
+    // `old` reports again, so it's the frame's latest, and `between` would show once it's dropped.
     badges.report(TAB, 0, 'old', at(1.25));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['new', 'older', 'old'] }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['new', 'between', 'old'] }));
     const before = fake.shown.length;
     fake.frames.set(0, 'new');
     asked.answer('new');
@@ -491,6 +497,22 @@ describe('the popup’s check', () => {
     const asked = fake.asked.length;
     await vi.waitFor(() => expect(fake.asked).toHaveLength(asked + 16));
     expect(Object.keys(fake.stored())).toHaveLength(16);
+  });
+
+  it('reads the tab’s reports once when every frame still holds its document', async () => {
+    fake.frames.set(0, 'top').set(4, 'player');
+    badges.report(TAB, 0, 'top', at(2));
+    badges.report(TAB, 4, 'player', at(1.5));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'], 4: ['player'] }));
+    await settle();
+
+    // A worker that just woke has no copy of the reports: with nothing to drop, it queues nothing
+    // that would read them again, or hold the popup up behind a report that came since.
+    const woken = createTabBadges();
+    const before = fake.reads();
+    await woken.check(TAB);
+    expect(fake.reads() - before).toBe(1);
+    expect(fake.stored()).toEqual({ 0: ['top'], 4: ['player'] });
   });
 
   it('answers at once for a tab with no reports', async () => {

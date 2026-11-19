@@ -132,6 +132,7 @@ export function createTabBadges(): TabBadges {
         () => null,
       );
     const gone = docs.filter((doc) => doc !== held);
+    if (!gone.length) return;
     await apply(
       tabId,
       (frames) => gone.reduce((left, doc) => applyReport(left, frameId, doc, null), frames),
