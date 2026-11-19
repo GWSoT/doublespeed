@@ -25,6 +25,9 @@ export default defineConfig({
     },
     ...(browser === 'firefox'
       ? {
+          // ADR-0007: Mozilla's policies forbid storing data from private browsing, so Firefox never
+          // runs Doublespeed in private windows and doesn't offer the user the choice.
+          incognito: 'not_allowed',
           browser_specific_settings: {
             gecko: {
               id: 'doublespeed@gwsot.github.io',

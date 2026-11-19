@@ -16,6 +16,7 @@ videos ever played at 1×?*
 | [0004](docs/decisions/0004-site-rules.md) | Disabled sites match exact hostnames, `*.` covers subdomains, the address bar decides for iframes, `music.youtube.com` is seeded off. |
 | [0005](docs/decisions/0005-controls.md) | `Alt+.` / `Alt+,` / `Alt+R` browser shortcuts, a per-tab badge, a brief speed label, no welcome tab. |
 | [0006](docs/decisions/0006-distribution-and-privacy.md) | Free, MIT, nothing leaves the browser but synced settings. Listed as "Doublespeed"; repo public before the first submission. |
+| [0007](docs/decisions/0007-firefox-private-windows.md) | Not in Firefox's private windows (`incognito: "not_allowed"`), since Mozilla forbids storing data from private browsing. Chrome's incognito default is left as it is. |
 
 **Three findings shaped the plan.**
 - **Site access isn't guaranteed.** Firefox lets users revoke an MV3 extension's site access at any time, and Chrome lets them restrict it. The popup has to notice, so Phase 3 has a slice for it.
@@ -107,7 +108,7 @@ Doublespeed is live on the Chrome Web Store and addons.mozilla.org.
 
 **Slices:**
 - **Icon:** a play button with speed streaks on the existing purple, in every size both stores need. — done early, for risk 4: `assets/icon.svg` and `icon-16.svg`, rendered by `make icons`.
-- **Listing materials:** `PRIVACY.md`, listing text, screenshots, the justification for all-sites access, and the single-purpose statement. — drafted early, for risk 4, in [`store/listing.md`](store/listing.md), with images from `make store-images`; [`PRIVACY.md`](PRIVACY.md) added when the repo went public. 1.0.0's text for both stores is ready there (2026-11-18), with the addons.mozilla.org source package and its build steps checked on 0.1.1's code; that submission waits on [#32](https://github.com/GWSoT/doublespeed/issues/32).
+- **Listing materials:** `PRIVACY.md`, listing text, screenshots, the justification for all-sites access, and the single-purpose statement. — drafted early, for risk 4, in [`store/listing.md`](store/listing.md), with images from `make store-images`; [`PRIVACY.md`](PRIVACY.md) added when the repo went public. 1.0.0's text for both stores is ready there (2026-11-18), with the addons.mozilla.org source package and its build steps checked on 0.1.1's code. That submission waited on Mozilla's rule against storing data from private browsing, now met: Doublespeed doesn't run in Firefox's private windows ([#32](https://github.com/GWSoT/doublespeed/issues/32), [ADR-0007](docs/decisions/0007-firefox-private-windows.md)).
 - **Trademark:** the search from open item 2.
 - **Release:** the repo made public (done 2026-11-17, ahead of the rest), version 1.0.0 zips from CI, submitted to both stores from Nazar's accounts (the first submission to addons.mozilla.org, and an update to the existing Chrome Web Store item, whose unlisted uploads came early for risk 4), and the Chrome item made public once 1.0.0 is approved.
 
