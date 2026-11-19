@@ -367,7 +367,9 @@ test.describe('with the back/forward cache', () => {
 
   test('a page whose iframes report comes back from the cache with every report', async ({ context, page }) => {
     const docs = async () =>
-      Object.values(await tabReports(context, page)).map((report) => (report as { doc: string }).doc);
+      Object.values(await tabReports(context, page)).flatMap((reports) =>
+        (reports as { doc: string }[]).map((report) => report.doc),
+      );
     await page.goto('/iframes.html?bfcache');
     await expect.poll(() => reportCount(context, page)).toBe(6);
     const before = await docs();

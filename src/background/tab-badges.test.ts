@@ -55,10 +55,10 @@ function fakeBrowser({ storageMs = 0 } = {}) {
 
   return {
     badge: () => badge.get(TAB),
-    /** The tab's stored reports, by frame id, as each frame's `doc`. */
+    /** The tab's stored reports, by frame id, as the `doc` of each report in the frame, the latest last. */
     stored: () => {
-      const tab = (session.get(`tab:${TAB}`) ?? {}) as Record<string, { doc: string }>;
-      return Object.fromEntries(Object.entries(tab).map(([frameId, frame]) => [frameId, frame.doc]));
+      const tab = (session.get(`tab:${TAB}`) ?? {}) as Record<string, { doc: string }[]>;
+      return Object.fromEntries(Object.entries(tab).map(([frameId, reports]) => [frameId, reports.map((r) => r.doc)]));
     },
     frames,
     asked,
@@ -91,7 +91,7 @@ describe('reports', () => {
     fake.frames.set(0, 'top').set(4, 'player');
     badges.report(TAB, 0, 'top', at(2));
     badges.report(TAB, 4, 'player', at(1.5));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 4: 'player' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'], 4: ['player'] }));
     expect(fake.badge()).toBe('2×');
   });
 
@@ -115,7 +115,7 @@ describe('a report whose withdrawal never arrived (issue #26)', () => {
     // The tab moved on through a browser page; the new page's video is in an iframe.
     fake.frames.set(0, 'new-top').set(7, 'player');
     badges.report(TAB, 7, 'player', at(2));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 7: 'player' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 7: ['player'] }));
     expect(fake.badge()).toBe('2×');
     expect(new Set(fake.messages.map((m) => JSON.stringify(m)))).toEqual(new Set(['{"type":"frameDoc"}']));
   });
@@ -124,12 +124,12 @@ describe('a report whose withdrawal never arrived (issue #26)', () => {
     fake.frames.set(0, 'top').set(3, 'ad');
     badges.report(TAB, 0, 'top', at(2));
     badges.report(TAB, 3, 'ad', at(1));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 3: 'ad' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'], 3: ['ad'] }));
 
     fake.frames.delete(3);
     fake.frames.set(5, 'player');
     badges.report(TAB, 5, 'player', at(1.5));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 5: 'player' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'], 5: ['player'] }));
   });
 
   it('goes even when its own document left before the report was stored', async () => {
@@ -146,7 +146,7 @@ describe('a withdrawal', () => {
     fake.frames.set(0, 'top').set(4, 'player');
     badges.report(TAB, 0, 'top', at(2));
     badges.report(TAB, 4, 'player', at(1.5));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 4: 'player' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'], 4: ['player'] }));
 
     // The tab moved to a browser page: the iframe's withdrawal arrives, the top frame's doesn't.
     fake.frames.clear();
@@ -170,13 +170,143 @@ describe('a withdrawal', () => {
     fake.frames.set(0, 'top').set(4, 'player');
     badges.report(TAB, 0, 'top', at(2));
     badges.report(TAB, 4, 'player', at(1.5));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 4: 'player' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'], 4: ['player'] }));
 
     fake.frames.delete(4);
     badges.report(TAB, 4, 'player', null);
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'] }));
     await settle();
-    expect(fake.stored()).toEqual({ 0: 'top' });
+    expect(fake.stored()).toEqual({ 0: ['top'] });
+  });
+});
+
+describe('a late report from the page a frame left (issue #34)', () => {
+  /** Frame 0 held `old`, whose report the background has and has checked; the frame now holds `new`. */
+  async function leave(): Promise<void> {
+    fake.frames.set(0, 'old');
+    badges.report(TAB, 0, 'old', at(1.5));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0]));
+    await settle();
+    fake.frames.set(0, 'new');
+  }
+
+  /** Waits for `stored`, then lets the checks that still follow finish, and expects it again. */
+  async function ends(stored: Record<string, string[]>, badge: string): Promise<void> {
+    await vi.waitFor(() => expect(fake.stored()).toEqual(stored));
+    await settle();
+    await settle();
+    expect(fake.stored()).toEqual(stored);
+    expect(fake.badge()).toBe(badge);
+  }
+
+  it('can’t replace the new page’s report', async () => {
+    await leave();
+    badges.report(TAB, 0, 'new', at(2));
+    badges.report(TAB, 0, 'old', at(1.5));
+    await ends({ 0: ['new'] }, '2×');
+  });
+
+  it('nor can the old page’s withdrawal right behind it', async () => {
+    await leave();
+    badges.report(TAB, 0, 'new', at(2));
+    badges.report(TAB, 0, 'old', at(1.5));
+    badges.report(TAB, 0, 'old', null);
+    await ends({ 0: ['new'] }, '2×');
+  });
+
+  it('is dropped, with nothing kept, when the new page withdraws before its answer is handled', async () => {
+    await leave();
+    const first = fake.busy(0);
+    badges.report(TAB, 0, 'new', at(2));
+    badges.report(TAB, 0, 'old', at(1.5));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    // The new page answers, then leaves for a browser page. Its withdrawal is handled before the
+    // answer, and the check that starts waits on the frame too.
+    const second = fake.busy(0);
+    badges.report(TAB, 0, 'new', null);
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['old'] }));
+    await settle();
+    fake.frames.delete(0);
+    first.answer('new');
+    await vi.waitFor(() => expect(fake.stored()).toEqual({}));
+    second.answer(null);
+    await ends({}, '');
+  });
+
+  it('is dropped though the old page reports again while the frame is asked', async () => {
+    await leave();
+    const asked = fake.busy(0);
+    badges.report(TAB, 0, 'new', at(2));
+    badges.report(TAB, 0, 'old', at(1.5));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    badges.report(TAB, 0, 'old', at(1.25));
+    await vi.waitFor(() => expect(fake.badge()).toBe('1.25'));
+    fake.frames.set(0, 'new');
+    asked.answer('new');
+    await ends({ 0: ['new'] }, '2×');
+  });
+
+  it('is dropped again when the old page reports after its report was dropped', async () => {
+    await leave();
+    badges.report(TAB, 0, 'new', at(2));
+    badges.report(TAB, 0, 'old', at(1.5));
+    await ends({ 0: ['new'] }, '2×');
+
+    const before = fake.asked.length;
+    badges.report(TAB, 0, 'old', at(1.25));
+    await vi.waitFor(() => expect(fake.asked.length).toBeGreaterThan(before));
+    await ends({ 0: ['new'] }, '2×');
+  });
+
+  it('is dropped though the new page and then the old one report again while the frame is asked', async () => {
+    await leave();
+    const asked = fake.busy(0);
+    badges.report(TAB, 0, 'new', at(2));
+    badges.report(TAB, 0, 'old', at(1.5));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    badges.report(TAB, 0, 'new', at(2.25));
+    badges.report(TAB, 0, 'old', at(1.25));
+    await vi.waitFor(() => expect(fake.badge()).toBe('1.25'));
+    fake.frames.set(0, 'new');
+    asked.answer('new');
+    await ends({ 0: ['new'] }, '2.25');
+  });
+
+  it('is dropped by an answer that leaves alone a newer page’s report', async () => {
+    // The check reads only `old`'s report, then asks the frame, which holds `new` by then.
+    await leave();
+    const first = fake.busy(0);
+    void badges.check(TAB);
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    // Before the answer, `new`, comes back, the frame moves on to a third page, which reports.
+    // Its own check's question is held up too.
+    const second = fake.busy(0);
+    badges.report(TAB, 0, 'third', at(2));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0, 0]));
+    fake.frames.set(0, 'third');
+    first.answer('new');
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['third'] }));
+    second.answer('third');
+    await ends({ 0: ['third'] }, '2×');
+  });
+
+  it('has the frame asked again once dropped, since the answer may name a page the tab has left', async () => {
+    await leave();
+    const asked = fake.busy(0);
+    badges.report(TAB, 0, 'new', at(2));
+    badges.report(TAB, 0, 'old', at(1.5));
+    await vi.waitFor(() => expect(fake.asked).toEqual([0, 0]));
+
+    // The tab moves to a browser page while the answer, `new`, is on its way, and the new page's
+    // withdrawal is lost. Dropping `old` leaves `new`'s report, until the next check drops it.
+    fake.frames.delete(0);
+    asked.answer('new');
+    await ends({}, '');
+    expect(fake.asked).toEqual([0, 0, 0]);
   });
 });
 
@@ -184,7 +314,7 @@ describe('a page back from the back/forward cache', () => {
   it('can’t lose its report to an answer about its old document id', async () => {
     fake.frames.set(0, 'top');
     badges.report(TAB, 0, 'top', at(2));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'] }));
 
     // The background asks while the page is going into the cache; the answer, null, is held up.
     const leaving = fake.busy(0);
@@ -194,10 +324,10 @@ describe('a page back from the back/forward cache', () => {
     // The page comes back under a new id and reports, before that answer lands.
     fake.frames.set(0, 'top-again');
     badges.report(TAB, 0, 'top-again', at(2));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top-again' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top-again'] }));
     leaving.answer(null);
     await settle();
-    expect(fake.stored()).toEqual({ 0: 'top-again' });
+    expect(fake.stored()).toEqual({ 0: ['top-again'] });
     expect(fake.badge()).toBe('2×');
   });
 });
@@ -211,10 +341,10 @@ describe('a busy frame', () => {
     const top = fake.busy(0);
     fake.frames.set(7, 'player');
     badges.report(TAB, 7, 'player', at(2));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'old-top', 7: 'player' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['old-top'], 7: ['player'] }));
 
     top.answer('new-top');
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 7: 'player' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 7: ['player'] }));
     expect(fake.badge()).toBe('2×');
   });
 
@@ -257,7 +387,7 @@ describe('a check', () => {
     fake.frames.set(0, 'top').set(4, 'player');
     badges.report(TAB, 0, 'top', at(2));
     badges.report(TAB, 4, 'player', at(1.5));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top', 4: 'player' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'], 4: ['player'] }));
     await settle();
 
     // A check is out, and the top frame's answer, "top", is held up on its way.
@@ -282,7 +412,7 @@ describe('the popup’s check', () => {
   it('drops the stale reports before it resolves', async () => {
     fake.frames.set(0, 'top');
     badges.report(TAB, 0, 'top', at(2));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'] }));
 
     fake.frames.delete(0);
     await badges.check(TAB);
@@ -293,7 +423,7 @@ describe('the popup’s check', () => {
   it('waits for a busy frame no longer than CHECK_WAIT_MS, and still takes its answer after', async () => {
     fake.frames.set(0, 'top');
     badges.report(TAB, 0, 'top', at(2));
-    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: 'top' }));
+    await vi.waitFor(() => expect(fake.stored()).toEqual({ 0: ['top'] }));
 
     vi.useFakeTimers();
     const top = fake.busy(0);
@@ -303,7 +433,7 @@ describe('the popup’s check', () => {
     expect(done).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     expect(done).toBe(true);
-    expect(fake.stored()).toEqual({ 0: 'top' });
+    expect(fake.stored()).toEqual({ 0: ['top'] });
 
     top.answer('another-page');
     await vi.advanceTimersByTimeAsync(0);
@@ -330,6 +460,12 @@ describe('the popup’s check', () => {
     expect(fake.stored()).not.toHaveProperty('0');
     expect(Object.keys(fake.stored())).toHaveLength(16);
     expect(fake.badge()).toBe('2×');
+
+    // Dropping the old top frame's report started another check, which asks the sixteen again
+    // and keeps them.
+    const asked = fake.asked.length;
+    await vi.waitFor(() => expect(fake.asked).toHaveLength(asked + 16));
+    expect(Object.keys(fake.stored())).toHaveLength(16);
   });
 
   it('answers at once for a tab with no reports', async () => {

@@ -12,9 +12,10 @@
  *   so a page's listener can't stop them reaching this frame's reporter. Being first is what
  *   counts; the capture phase, on the window, keeps it so against a page's capture listeners
  *   on the window.
- * - Reports carry an id for this document, so the background can tell a late withdrawal from
- *   the page the tab just left apart from the new page in the same frame. A page back from the
- *   cache takes a new id, so nothing said about it before it left can touch its new report.
+ * - Reports carry an id for this document, so the background can tell a late report or
+ *   withdrawal from the page the tab just left apart from the new page in the same frame. A page
+ *   back from the cache takes a new id, so nothing said about it before it left can touch its new
+ *   report.
  * - Asked which document the frame holds (`FrameDocQuery`), it answers with that id, or `null`
  *   once the page is hidden, so the background can drop a report whose withdrawal never arrived.
  */
