@@ -3,14 +3,13 @@
 What goes into the Chrome Web Store's developer dashboard and addons.mozilla.org's Developer Hub,
 field by field.
 
-- **In review now:** 0.1.1, unlisted, on the Chrome Web Store item
+- **Published now:** 0.1.1, unlisted, on the Chrome Web Store item
   `adocdalonhmgamdohammiefgchljljef` (publisher GWOSTIK). 0.1.0 went to review on 2026-11-17 and
-  was rejected the next day for its description; 0.1.1 went to review on 2026-11-18 (ROADMAP
-  risk 4). [What 0.1.1 went to review with](#011-in-review-since-2026-11-18) is recorded at the
-  end, unchanged.
-- **Goes with the next upload:** 1.0.0, as an update to the same Chrome item once 0.1.1's review
-  ends, and as the first submission to addons.mozilla.org (AMO). Its text is below. Change the
-  Chrome listing with that package rather than by withdrawing 0.1.1's review.
+  was rejected the next day for its description; 0.1.1 went to review on 2026-11-18 and was
+  published by 2026-11-20 (ROADMAP risk 4).
+  [What 0.1.1 went to review with](#011-published-2026-11-20) is recorded at the end, unchanged.
+- **Goes with the next upload:** 1.0.0, as an update to the same Chrome item and as the first
+  submission to addons.mozilla.org (AMO). Its text is below.
 
 The images are in [`images/`](images/), made by `make store-images`; the store icon is
 [`public/icon/128.png`](../public/icon/128.png), made by `make icons`. The name and the Chrome
@@ -343,7 +342,7 @@ not quoted):
 
 **What follows from it:** "collects nothing" is gone from 1.0.0's description and from the README.
 `PRIVACY.md`, SPEC §6 and ADR-0006 (a dated amendment; ADRs keep their decided text) change when
-1.0.0 is published, not before: the policy URL of 0.1.1, in review now, is `PRIVACY.md` on main,
+1.0.0 is published, not before: the policy URL of 0.1.1, the published version, is `PRIVACY.md` on main,
 and a policy naming two data types beside a form with no box ticked is the discrepancy the FAQ
 quoted above warns of. Their text is ready on the `privacy-1-0-0` branch
 ([Still open](#still-open)). 0.1.1 itself already handles both data types with neither declared;
@@ -461,8 +460,8 @@ Only the owner can do or decide these.
 - **`PRIVACY.md`, with 1.0.0:** the new policy (with SPEC §6 and ADR-0006's amendment) is on the
   `privacy-1-0-0` branch. Uploading and publishing are separate: while 1.0.0 is in review, the
   published item keeps its old form. So:
-  1. Before the upload, add a line to main's README, which the listing's homepage shows, linking
-     the branch's file as the policy from 1.0.0, so the Limited Use statement is one click from
+  1. Done with the bump to 1.0.0: main's README, which the listing's homepage shows, links the
+     branch's file as the policy from 1.0.0, so the Limited Use statement is one click from
      the homepage during the review. Main's `PRIVACY.md`, which 0.1.1's policy URL points to,
      stays as it is.
   2. Give 1.0.0's draft the branch's file as its policy URL
@@ -471,13 +470,10 @@ Only the owner can do or decide these.
      (`git rebase --onto main 34bfad8 privacy-1-0-0`, since main is squash-merged), take the
      extra README line out, and set the policy URL back to main's. Keep the branch until that
      change of URL is live: the published item points at it until then.
-- **In the Chrome dashboard, once 0.1.1's review ends:** upload 1.0.0, paste the text above, tick
-  **Web history** and **User activity**, and check that the form's definitions still read as noted
-  in [Data usage](#data-usage).
+- **In the Chrome dashboard:** upload 1.0.0, paste the text above, tick **Web history** and
+  **User activity**, and check that the form's definitions still read as noted in
+  [Data usage](#data-usage). 0.1.1's review has ended, so nothing waits on it.
 - **On AMO:** submit 1.0.0 with the source package, as above.
-- **The screenshot:** it predates the popup's Site list link, which `make store-images` now draws.
-  Re-render and commit it before 1.0.0? Recommended: yes, so it shows the popup as it is. Nothing
-  in this text depends on it.
 - **An in-product disclosure?** Should Doublespeed show its own data disclosure and ask for consent
   (a welcome tab or a first-run popup panel)? Google's troubleshooting page says disclosure in the
   listing is sufficient, and FAQ 10, still live, says it isn't
@@ -496,9 +492,10 @@ Only the owner can do or decide these.
 - **The test video:** check, signed out, that the film in the test instructions still plays and at
   2×.
 
-## 0.1.1, in review since 2026-11-18
+## 0.1.1, published 2026-11-20
 
-What 0.1.1 went to review with, field by field, as the evidence for the review timeline. The
+What 0.1.1 went to review with on 2026-11-18, field by field, as the evidence for the review
+timeline. The store page showed it published on 2026-11-20; no approval email came. The
 manifest summary was "Plays every web video at 2× by default. Change the speed per video, or turn
 it off per site." The images were those in `store/images/` at `1851208`, the promo tile reading
 "Every video at 2×". The category, homepage and support URLs, store icon, remote-code answer,
