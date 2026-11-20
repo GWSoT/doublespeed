@@ -8,8 +8,11 @@ field by field.
   was rejected the next day for its description; 0.1.1 went to review on 2026-11-18 and was
   published by 2026-11-20 (ROADMAP risk 4).
   [What 0.1.1 went to review with](#011-published-2026-11-20) is recorded at the end, unchanged.
-- **Goes with the next upload:** 1.0.0, as an update to the same Chrome item and as the first
-  submission to addons.mozilla.org (AMO). Its text is below.
+- **In review now:** 1.0.0, on the same Chrome item, sent on 2026-11-20 11:37 EET from `dc1e03f`
+  with the text below. It asks for public visibility, and it isn't published automatically:
+  once approved, it goes live from the dashboard's publish button.
+- **Still to submit:** 1.0.0 to addons.mozilla.org (AMO), its first submission there. Its text is
+  below. Later versions go to both stores from a version tag ([`docs/releasing.md`](../docs/releasing.md)).
 
 The images are in [`images/`](images/), made by `make store-images`; the store icon is
 [`public/icon/128.png`](../public/icon/128.png), made by `make icons`. The name and the Chrome
@@ -66,8 +69,8 @@ Doublespeed controls the playback speed of videos on web pages. It sets videos t
 | `storage` | `Keeps the user's settings in storage.sync, which the browser copies to the user's other devices if they have its sync on: their default speed, the sites Doublespeed is off on (with the date each was added), and whether they've closed the shortcut hint. In storage.session, which the browser clears when it closes, it keeps, for each frame of each tab, its video's speed, whether it's playing, when it last started and whether the site is off, with the ids that tell the frames and their documents apart, for the toolbar badge and the popup. While the user is giving Doublespeed its site access back from the popup, it also keeps which tab asked and when, to reload that tab once access is granted.` |
 | Host permission (`<all_urls>`) | `Videos can be on any site and inside any frame, so the content script runs on every page to find each video element and set its playback speed. On each page it reads the page's address, to check it against the user's list of sites where Doublespeed is off, and each video's source address and state (its speed, length, whether it's playing and where it is on screen), to notice a new video, to show the tab's speed and to place the speed label. It notes the time of the user's last click or key press, but not which key or where, to tell a speed the user chose from one the site set. The source addresses and the input time stay in the page's memory. The popup and the background read the tab's address too, to name its site and to apply the site list inside frames. What it stores is listed under storage. Doublespeed itself sends nothing anywhere: it makes no network requests.` |
 
-  The host justification is 879 characters; the dashboard's limit for it is unverified (it shows a
-  counter), so check the counter when pasting.
+  The dashboard's limit for the purpose and for each justification is 1,000 characters; the host
+  justification is 879.
 
 **Remote code:** No, I am not using remote code.
 
@@ -84,10 +87,15 @@ published; after that the URL is `https://github.com/GWSoT/doublespeed/blob/main
 
 ### Distribution tab
 
-**Payments:** free. **Visibility:** unlisted until launch (ROADMAP risk 4), then public.
-**Regions:** all.
+**Payments:** free. **Visibility:** public from 1.0.0 (0.1.0 and 0.1.1 were unlisted, for ROADMAP
+risk 4). A change of visibility is reviewed like any other, so it went with 1.0.0's review rather
+than after it. **Regions:** all. **Publishing:** by hand after approval, not automatically.
 
 ### Test instructions tab
+
+The field takes 500 characters, which the dashboard shows only once it is opened for editing. The
+text below is 881, so 1.0.0 went to review with the 495-character version under it, the same
+four checks without the popup's first state.
 
 ```text
 No account or setup needed. Use a fresh browser profile: settings synced from another browser would replace the defaults these steps assume.
@@ -97,6 +105,17 @@ No account or setup needed. Use a fresh browser profile: settings synced from an
 3. Press Alt+. (Option+. on a Mac). The video goes to 2.25×, a label with the new speed shows on it for about a second, and the icon shows "2.25".
 4. Click Doublespeed's toolbar icon to open its popup. It shows youtube.com with a switch beside it, and "Videos play at your default speed." under it.
 5. Click the switch to turn Doublespeed off for youtube.com. The popup now reads "Off. The site sets the speed.", the video goes back to the speed it had before Doublespeed changed it (1×), and the icon shows "off".
+```
+
+As sent:
+
+```text
+No account or setup needed. Use a fresh browser profile: synced settings would replace the defaults.
+
+1. Open https://www.youtube.com/watch?v=aqz-KE-bpKQ. The video plays at 2×.
+2. Pin Doublespeed from the Extensions menu. Its icon shows "2×".
+3. Press Alt+. (Option+. on a Mac). The video goes to 2.25× and a label shows it for about a second.
+4. Open the popup and turn its switch off for youtube.com. It reads "Off. The site sets the speed.", the video returns to 1× and the icon shows "off".
 ```
 
 ## addons.mozilla.org, 1.0.0
@@ -444,6 +463,9 @@ On 2026-11-18, with the 0.1.1 code and this branch's `messages.json`:
 3. `diff -r` of the result against the files of the package `npm run zip:firefox` had made on
    macOS (Node 24.22.1) found no difference in any of the 16 files.
 
+On 2026-11-20 the same check ran on 1.0.0: the `git archive` of `dc1e03f` (134 files, no
+`scratch/`), built in the same image, matched the 1.0.0 Firefox package in all 16 files.
+
 AMO's default reviewer build environment is Ubuntu 24.04 on ARM64 with Node 24.14.0 and npm 11.9.0
 ([source code submission][amo-source]). The check ran on Debian with the same Node and npm, not on
 Ubuntu, and the notes say so. The same page asks for the build steps in a README inside the source
@@ -453,10 +475,9 @@ package, so [`README.md`](../README.md) has them.
 
 Only the owner can do or decide these.
 
-- **The order of the release:** bump the version to 1.0.0 and build once, so both stores get
-  the same commit; upload to Chrome; submit to AMO no earlier than the
-  `PRIVACY.md` merge below, since AMO's description links it. Or say that Firefox ships later, as
-  1.0.1.
+- **The order of the release:** both stores get the build of `dc1e03f`. Chrome's went to review
+  on 2026-11-20; submit to AMO no earlier than the `PRIVACY.md` merge below, since AMO's
+  description links it.
 - **`PRIVACY.md`, with 1.0.0:** the new policy (with SPEC §6 and ADR-0006's amendment) is on the
   `privacy-1-0-0` branch. Uploading and publishing are separate: while 1.0.0 is in review, the
   published item keeps its old form. So:
@@ -464,15 +485,15 @@ Only the owner can do or decide these.
      branch's file as the policy from 1.0.0, so the Limited Use statement is one click from
      the homepage during the review. Main's `PRIVACY.md`, which 0.1.1's policy URL points to,
      stays as it is.
-  2. Give 1.0.0's draft the branch's file as its policy URL
+  2. Done 2026-11-20: 1.0.0's draft has the branch's file as its policy URL
      ([Privacy tab](#privacy-tab)).
   3. When 1.0.0 is published, merge the branch, after rebasing it onto main
      (`git rebase --onto main 34bfad8 privacy-1-0-0`, since main is squash-merged), take the
      extra README line out, and set the policy URL back to main's. Keep the branch until that
      change of URL is live: the published item points at it until then.
-- **In the Chrome dashboard:** upload 1.0.0, paste the text above, tick **Web history** and
-  **User activity**, and check that the form's definitions still read as noted in
-  [Data usage](#data-usage). 0.1.1's review has ended, so nothing waits on it.
+- **In the Chrome dashboard, once 1.0.0 is approved:** press publish. No approval email came for
+  0.1.1, so look at the dashboard. The form's definitions of Web history, User activity and
+  Website content read on 2026-11-20 as noted in [Data usage](#data-usage).
 - **On AMO:** submit 1.0.0 with the source package, as above.
 - **An in-product disclosure?** Should Doublespeed show its own data disclosure and ask for consent
   (a welcome tab or a first-run popup panel)? Google's troubleshooting page says disclosure in the
@@ -485,12 +506,6 @@ Only the owner can do or decide these.
   policy rejection, and the Program Policies' Repeat Abuse section says "Serious or repeated
   violations … will result in the suspension of your developer account". If a review asks for a
   screen, it gets its own ADR.
-- **The source package, again at 1.0.0:** the rebuild in
-  [Source package, checked](#source-package-checked) used 0.1.1's code. Before submitting to AMO,
-  rebuild from the 1.0.0 source zip the same way and compare it with the 1.0.0 package.
-- **The host justification's length:** check it against the dashboard's counter when pasting.
-- **The test video:** check, signed out, that the film in the test instructions still plays and at
-  2×.
 
 ## 0.1.1, published 2026-11-20
 
