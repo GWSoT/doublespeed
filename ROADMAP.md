@@ -110,7 +110,7 @@ Doublespeed is live on the Chrome Web Store and addons.mozilla.org.
 - **Icon:** a play button with speed streaks on the existing purple, in every size both stores need. — done early, for risk 4: `assets/icon.svg` and `icon-16.svg`, rendered by `make icons`.
 - **Listing materials:** `PRIVACY.md`, listing text, screenshots, the justification for all-sites access, and the single-purpose statement. — drafted early, for risk 4, in [`store/listing.md`](store/listing.md), with images from `make store-images`; [`PRIVACY.md`](PRIVACY.md) added when the repo went public. 1.0.0's text for both stores is ready there (2026-11-18), with the addons.mozilla.org source package and its build steps checked on 0.1.1's code. That submission waited on Mozilla's rule against storing data from private browsing, now met: Doublespeed doesn't run in Firefox's private windows ([#32](https://github.com/GWSoT/doublespeed/issues/32), [ADR-0007](docs/decisions/0007-firefox-private-windows.md)).
 - **Trademark:** the search from open item 2.
-- **Release:** the repo made public (done 2026-11-17, ahead of the rest), version 1.0.0 zips from CI, submitted to both stores from Nazar's accounts (the first submission to addons.mozilla.org, and an update to the existing Chrome Web Store item, whose unlisted uploads came early for risk 4), and the Chrome item made public once 1.0.0 is approved.
+- **Release:** the repo made public (done 2026-11-17, ahead of the rest), version 1.0.0 zips from CI, submitted to both stores from Nazar's accounts (the first submission to addons.mozilla.org, and an update to the existing Chrome Web Store item, whose unlisted uploads came early for risk 4), and the Chrome item made public with 1.0.0. *Sent to the Chrome Web Store's review* on 2026-11-20 11:37 EET, built from `dc1e03f`, asking for public visibility and published by hand once approved. Versions after 1.0.0 are released from a version tag by [`release.yml`](.github/workflows/release.yml), which uploads to both stores with `wxt submit` ([`docs/releasing.md`](docs/releasing.md)); that came forward from After v1.
 
 [#7](https://github.com/GWSoT/doublespeed/issues/7)
 
@@ -122,7 +122,6 @@ Doublespeed is live on the Chrome Web Store and addons.mozilla.org.
 
 - **More enhancers,** volume boost first. Web Audio silences cross-origin videos served without CORS headers, so it needs a fallback.
 - **Per-site speeds:** the site rule gains a `speed` field.
-- **Automated store uploads** with `wxt submit`.
 - **Safari.**
 
 ---

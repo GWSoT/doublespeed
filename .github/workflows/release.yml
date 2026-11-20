@@ -1,0 +1,161 @@
+# A release: the checks, the store packages built from a version tag, a GitHub release that holds
+# them, and the uploads to the Chrome Web Store and addons.mozilla.org. docs/releasing.md has the
+# steps and the secrets.
+#
+# Pushing a tag `v<version>` does all of it. Running the workflow by hand takes an existing tag and
+# says what to do with the stores, which is how a tag older than this file gets its release.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The version tag to release, such as v1.0.1
+        required: true
+        type: string
+      stores:
+        description: What to do with the stores
+        required: true
+        type: choice
+        default: check
+        options:
+          - check # sign in to each store with its secrets, upload nothing
+          - submit # upload and send to review
+          - skip # the GitHub release only
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    name: check and package
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: The tag is the package's version
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::The tag is $TAG, and package.json says $version."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - run: make install
+      - run: make lint
+      - run: make test
+      - run: npx playwright install --with-deps chromium
+      - run: make e2e
+      - run: make zip
+      # addons.mozilla.org gets the commit's own files as the source, not WXT's sources zip, which
+      # takes whatever is in the checkout and leaves the unit tests out (store/listing.md).
+      - name: The source package
+        run: |
+          rm .output/*-sources.zip
+          git archive --format=zip -o ".output/doublespeed-${{ steps.version.outputs.version }}-source.zip" HEAD
+      - uses: actions/upload-artifact@v7
+        with:
+          name: doublespeed-${{ steps.version.outputs.version }}
+          path: .output/*.zip
+          if-no-files-found: error
+          include-hidden-files: true
+
+  github-release:
+    name: GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: doublespeed-${{ needs.build.outputs.version }}
+          path: packages
+      - name: Create the release, or replace its files
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" packages/*.zip --clobber
+          else
+            gh release create "$TAG" packages/*.zip --verify-tag --generate-notes --title "Doublespeed ${{ needs.build.outputs.version }}"
+          fi
+
+  stores:
+    name: stores
+    needs: build
+    if: github.event_name == 'push' || inputs.stores != 'skip'
+    runs-on: ubuntu-latest
+    # The store secrets belong to this environment, so a required reviewer on it gates the uploads.
+    environment: stores
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      # `wxt submit` reads this: when true it signs in to the store and uploads nothing.
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.stores == 'check' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: make install
+      - uses: actions/download-artifact@v8
+        with:
+          name: doublespeed-${{ needs.build.outputs.version }}
+          path: packages
+
+      # Each store is skipped, with a warning, until its secrets exist.
+      - name: Chrome Web Store
+        env:
+          CHROME_API_VERSION: v2
+          CHROME_EXTENSION_ID: adocdalonhmgamdohammiefgchljljef
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
+          # DEFAULT_PUBLISH goes live once the review passes. STAGED_PUBLISH waits for a click in
+          # the dashboard.
+          CHROME_PUBLISH_TYPE: ${{ vars.CHROME_PUBLISH_TYPE || 'DEFAULT_PUBLISH' }}
+        run: |
+          if [ -z "$CHROME_PUBLISHER_ID" ] || [ -z "$CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL" ] || [ -z "$CHROME_SERVICE_ACCOUNT_PRIVATE_KEY" ]; then
+            echo "::warning::Chrome Web Store skipped: its secrets aren't set (docs/releasing.md)."
+            exit 0
+          fi
+          npx wxt submit --chrome-zip "packages/doublespeed-$VERSION-chrome.zip"
+
+      - name: addons.mozilla.org
+        if: ${{ !cancelled() }}
+        env:
+          FIREFOX_EXTENSION_ID: doublespeed@gwsot.github.io
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+          FIREFOX_CHANNEL: listed
+          FIREFOX_COMPATIBILITY: firefox
+        run: |
+          if [ -z "$FIREFOX_JWT_ISSUER" ] || [ -z "$FIREFOX_JWT_SECRET" ]; then
+            echo "::warning::addons.mozilla.org skipped: its secrets aren't set (docs/releasing.md)."
+            exit 0
+          fi
+          npx wxt submit \
+            --firefox-zip "packages/doublespeed-$VERSION-firefox.zip" \
+            --firefox-sources-zip "packages/doublespeed-$VERSION-source.zip"
