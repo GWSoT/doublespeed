@@ -5,9 +5,11 @@
 A Chrome and Firefox extension that plays web videos at 2× by default. Change the speed
 of a video with `Alt+.` / `Alt+,`, flip between 1× and your default with `Alt+R`, and turn it
 off for sites where 2× makes no sense. It makes no network requests and has no analytics; see
-[PRIVACY.md](PRIVACY.md).
+[PRIVACY.md](PRIVACY.md). From version 1.0.0 the privacy policy is
+[this one](https://github.com/GWSoT/doublespeed/blob/privacy-1-0-0/PRIVACY.md), which replaces it
+when 1.0.0 is published.
 
-Status: in development, not yet on the stores. See [ROADMAP.md](ROADMAP.md) for where it's at and
+Status: 1.0.0 is on its way to the stores' reviews; neither store page is public yet. See [ROADMAP.md](ROADMAP.md) for where it's at and
 [SPEC.md](SPEC.md) for how it behaves.
 
 ## Run it
